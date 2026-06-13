@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local config and credentials
+.env
+.env.*
+!.env.example
+*.json
+!*example*.json
+
+# Downloaded standards and generated data
+.data/
+data/
+input/
+*.pdf
+*.docx
+*.zip
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
