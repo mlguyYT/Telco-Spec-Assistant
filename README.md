@@ -1,9 +1,9 @@
 # Telco Spec Assistant
 
-> A grounded RAG assistant over public 5G, O-RAN, and 3GPP specifications, built as a production-shaped cloud application.
+> A grounded RAG assistant over public 5G, O-RAN, and 3GPP specifications, built on Google Cloud's Gemini Enterprise Agent Platform.
 
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
-![Platform](https://img.shields.io/badge/cloud--deployable-4285F4)
+![Platform](https://img.shields.io/badge/Gemini%20Enterprise%20Agent%20Platform-4285F4)
 
 Ask natural-language questions about telecom standards and get grounded, cited answers instead of plausible guesses. Each answer should point back to the exact specification, release, version, and clause that supports it.
 
@@ -120,9 +120,10 @@ V1 evaluation focuses on retrieval over the RLC specification:
 
 | Metric | Target |
 |---|---|
-| Retrieval recall@5 | Answer-supporting chunk appears in top 5 |
-| Citation precision | Cited clause supports the generated claim |
-| Groundedness | Answer avoids unsupported claims |
+| Answerable recall@5 | Answer-supporting RLC clause appears in top 5 |
+| Abstention accuracy | Out-of-scope questions return no RLC evidence |
+| Citation support | Approximated by expected-section hits in the local baseline |
+| Answer-level groundedness | Added when generation uses gold answers / assertions |
 | Latency p50 / p95 | Measured end to end |
 | Cost per request | Estimated from model and retrieval calls |
 

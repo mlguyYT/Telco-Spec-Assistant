@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from eval.run import evaluate
-from retrieval.local import LocalRetriever, tokenize
+from retrieval.local import LocalRetriever, is_out_of_scope_query, tokenize
 from serving.app import build_evidence_answer
 
 
@@ -18,6 +18,10 @@ class RetrievalEvalTests(unittest.TestCase):
         self.assertIn("am", tokens)
         self.assertIn("pdu", tokens)
         self.assertIn("nack", tokens)
+
+    def test_scope_guard_rejects_external_layer_question(self) -> None:
+        self.assertTrue(is_out_of_scope_query("Which PDCP entity performs ciphering?"))
+        self.assertFalse(is_out_of_scope_query("Which RLC service is provided to upper layers?"))
 
     def test_local_retriever_ranks_expected_section(self) -> None:
         retriever = LocalRetriever(
@@ -65,6 +69,31 @@ class RetrievalEvalTests(unittest.TestCase):
 
             self.assertEqual(report["question_count"], 1)
             self.assertEqual(report["recall_at_k"], 1.0)
+            self.assertEqual(report["answerable_recall_at_k"], 1.0)
+
+    def test_evaluate_counts_out_of_scope_abstention(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            chunks_path = root / "chunks.jsonl"
+            dataset_path = root / "dataset.jsonl"
+            chunks_path.write_text(json.dumps(_chunk("4.4", "RLC segmentation and reassembly")) + "\n", encoding="utf-8")
+            dataset_path.write_text(
+                json.dumps(
+                    {
+                        "id": "q1",
+                        "question": "Which PDCP entity performs ciphering?",
+                        "expected_sections": [],
+                        "expected_answerable": False,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            report = evaluate(dataset_path, chunks_path, top_k=1)
+
+            self.assertEqual(report["unanswerable_question_count"], 1)
+            self.assertEqual(report["abstention_accuracy"], 1.0)
 
     def test_evidence_answer_refuses_low_score(self) -> None:
         result = type("Result", (), {"score": 0.1, "chunk": _chunk("4.4", "text")})()

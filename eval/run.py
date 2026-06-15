@@ -43,19 +43,32 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
     results = []
     latencies: list[float] = []
     hits = 0
+    answerable_count = 0
+    answerable_hits = 0
+    unanswerable_count = 0
+    abstention_hits = 0
     for row in rows:
         expected_sections = _expected_sections(row)
+        expected_answerable = _expected_answerable(row)
         start = time.perf_counter()
         retrieved = retriever.search(row["question"], top_k=top_k)
         latency_ms = (time.perf_counter() - start) * 1000
         latencies.append(latency_ms)
         retrieved_sections = [item.chunk["section"] for item in retrieved]
-        hit = bool(set(expected_sections).intersection(retrieved_sections))
+        if expected_answerable:
+            hit = bool(set(expected_sections).intersection(retrieved_sections))
+            answerable_count += 1
+            answerable_hits += int(hit)
+        else:
+            hit = not retrieved_sections
+            unanswerable_count += 1
+            abstention_hits += int(hit)
         hits += int(hit)
         results.append(
             {
                 "id": row["id"],
                 "question": row["question"],
+                "expected_answerable": expected_answerable,
                 "expected_sections": expected_sections,
                 "retrieved_sections": retrieved_sections,
                 "hit": hit,
@@ -65,8 +78,12 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
 
     return {
         "question_count": len(rows),
+        "answerable_question_count": answerable_count,
+        "unanswerable_question_count": unanswerable_count,
         "top_k": top_k,
         "recall_at_k": hits / len(rows),
+        "answerable_recall_at_k": answerable_hits / answerable_count if answerable_count else None,
+        "abstention_accuracy": abstention_hits / unanswerable_count if unanswerable_count else None,
         "latency_ms_p50": statistics.median(latencies),
         "latency_ms_p95": _percentile(latencies, 95),
         "citation_support": "approximated_by_expected_section_hit",
@@ -81,6 +98,12 @@ def _expected_sections(row: dict[str, Any]) -> list[str]:
     if "expected_section" in row:
         return [str(row["expected_section"])]
     raise ValueError(f"question {row.get('id', '<unknown>')} is missing expected sections")
+
+
+def _expected_answerable(row: dict[str, Any]) -> bool:
+    if "expected_answerable" in row:
+        return bool(row["expected_answerable"])
+    return bool(_expected_sections(row))
 
 
 def _percentile(values: list[float], percentile: int) -> float:

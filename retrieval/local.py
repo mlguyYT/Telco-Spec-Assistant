@@ -32,6 +32,29 @@ STOPWORDS = {
     "which",
     "with",
 }
+OUT_OF_SCOPE_TERMS = {
+    "ciphering",
+    "compression",
+    "harq",
+    "integrity",
+    "mac",
+    "pdcp",
+    "rrc",
+    "scheduling",
+}
+IN_SCOPE_TERMS = {
+    "am",
+    "amd",
+    "rlc",
+    "sdu",
+    "pdu",
+    "sn",
+    "status",
+    "tm",
+    "tmd",
+    "um",
+    "umd",
+}
 
 
 @dataclass(frozen=True)
@@ -58,6 +81,9 @@ class LocalRetriever:
         return cls(chunks)
 
     def search(self, query: str, top_k: int = 5) -> list[RetrievalResult]:
+        if is_out_of_scope_query(query):
+            return []
+
         query_terms = tokenize(query)
         if not query_terms:
             return []
@@ -96,6 +122,11 @@ def tokenize(text: str) -> list[str]:
     raw_tokens = [_normalize_token(match.group(0).lower()) for match in TOKEN_RE.finditer(text)]
     tokens = [token for token in raw_tokens if token and token not in STOPWORDS]
     return _expand_domain_terms(tokens)
+
+
+def is_out_of_scope_query(text: str) -> bool:
+    tokens = set(tokenize(text))
+    return bool(tokens.intersection(OUT_OF_SCOPE_TERMS)) and not bool(tokens.intersection(IN_SCOPE_TERMS))
 
 
 def _normalize_token(token: str) -> str:
