@@ -12,6 +12,7 @@ from retrieval.local import LocalRetriever
 class AskHandler(BaseHTTPRequestHandler):
     retriever: LocalRetriever
     top_k: int
+    min_score: float
 
     def do_GET(self) -> None:
         if self.path == "/health":
@@ -32,7 +33,8 @@ class AskHandler(BaseHTTPRequestHandler):
             return
 
         results = self.retriever.search(question, top_k=self.top_k)
-        if not results:
+        answer = build_evidence_answer(results, min_score=self.min_score)
+        if answer is None:
             self._json_response(
                 {
                     "answer": "Insufficient evidence in the indexed corpus.",
@@ -44,7 +46,7 @@ class AskHandler(BaseHTTPRequestHandler):
         citations = [_citation(result) for result in results]
         self._json_response(
             {
-                "answer": "Retrieved evidence from the indexed corpus. Generation is not enabled in the local baseline.",
+                "answer": answer,
                 "citations": citations,
             }
         )
@@ -67,11 +69,13 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument("--min-score", type=float, default=1.0)
     args = parser.parse_args()
 
     handler = AskHandler
     handler.retriever = LocalRetriever.from_jsonl(Path(args.chunks))
     handler.top_k = args.top_k
+    handler.min_score = args.min_score
 
     server = ThreadingHTTPServer((args.host, args.port), handler)
     print(f"serving http://{args.host}:{args.port}")
@@ -92,6 +96,18 @@ def _citation(result: Any) -> dict[str, Any]:
         "chunk_id": chunk["chunk_id"],
         "snippet": snippet,
     }
+
+
+def build_evidence_answer(results: list[Any], min_score: float = 1.0) -> str | None:
+    if not results or results[0].score < min_score:
+        return None
+
+    top = results[0].chunk
+    return (
+        "The indexed corpus contains supporting evidence in "
+        f"{top['spec_id']} {top['version']}, clause {top['section']} "
+        f"({top['section_title']}). Review the citations for the exact source text."
+    )
 
 
 if __name__ == "__main__":

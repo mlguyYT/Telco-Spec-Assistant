@@ -5,7 +5,7 @@ V1 serving target:
 - `GET /health`
 - `POST /ask`
 
-The `/ask` endpoint should return grounded answers with citations or state that the indexed corpus does not contain enough evidence.
+The `/ask` endpoint should return conservative evidence responses with citations or state that the indexed corpus does not contain enough evidence.
 
 Run the local baseline after chunks have been generated:
 
@@ -15,3 +15,5 @@ curl -X POST http://127.0.0.1:8080/ask \
   -H 'content-type: application/json' \
   -d '{"q":"What are the three RLC modes?"}'
 ```
+
+The local baseline does not use a generative model yet. It returns the strongest retrieved evidence and citations, which keeps unsupported claims out of the API while retrieval quality is still being tuned.
