@@ -20,7 +20,7 @@ V1 builds the spec-RAG path only:
 - Fetch public specifications from a manifest.
 - Parse and chunk documents with citation metadata.
 - Index chunks in Google Cloud RAG Engine backed by Vector Search 2.0.
-- Serve an API that returns conservative evidence responses with citations.
+- Serve an API that returns conservative extractive answers with citations.
 - Evaluate retrieval and abstention quality on 26 RLC-focused questions.
 
 Structured lookup, agent routing, MCP, and deep production observability are documented as later phases, not part of the first executable cut.

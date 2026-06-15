@@ -7,7 +7,7 @@ from pathlib import Path
 
 from eval.run import evaluate
 from retrieval.local import LocalRetriever, is_out_of_scope_query, tokenize
-from serving.app import build_evidence_answer
+from serving.app import _citation, _order_results_for_answer, build_evidence_answer
 
 
 class RetrievalEvalTests(unittest.TestCase):
@@ -101,12 +101,75 @@ class RetrievalEvalTests(unittest.TestCase):
         self.assertIsNone(build_evidence_answer([result], min_score=1.0))
 
     def test_evidence_answer_cites_top_clause(self) -> None:
-        result = type("Result", (), {"score": 2.0, "chunk": _chunk("4.4", "text")})()
+        result = type(
+            "Result",
+            (),
+            {
+                "score": 2.0,
+                "chunk": _chunk("4.4", "4.4 Functions\nsegmentation and reassembly of RLC SDUs"),
+            },
+        )()
 
-        answer = build_evidence_answer([result], min_score=1.0)
+        answer = build_evidence_answer([result], question="Which function supports reassembly?", min_score=1.0)
 
         self.assertIsNotNone(answer)
         self.assertIn("clause 4.4", answer or "")
+        self.assertIn("segmentation and reassembly", answer or "")
+
+    def test_evidence_answer_attributes_selected_evidence_clause(self) -> None:
+        weak = type("Result", (), {"score": 3.0, "chunk": _chunk("4.1", "4.1 Intro\nRLC architecture overview")})()
+        strong_evidence = type(
+            "Result",
+            (),
+            {
+                "score": 2.0,
+                "chunk": _chunk(
+                    "4.2.1",
+                    "4.2.1 RLC entities\nAn RLC entity can be configured to perform data transfer in one of the following three modes: Transparent Mode (TM), Unacknowledged Mode (UM) or Acknowledged Mode (AM).",
+                ),
+            },
+        )()
+
+        answer = build_evidence_answer([weak, strong_evidence], question="What are the three RLC modes?")
+
+        self.assertIsNotNone(answer)
+        self.assertIn("clause 4.2.1", answer or "")
+        self.assertIn("Transparent Mode", answer or "")
+
+    def test_evidence_citation_order_puts_selected_chunk_first(self) -> None:
+        weak = type("Result", (), {"score": 3.0, "chunk": _chunk("4.1", "4.1 Intro\nRLC architecture overview")})()
+        strong_evidence = type(
+            "Result",
+            (),
+            {
+                "score": 2.0,
+                "chunk": _chunk(
+                    "4.2.1",
+                    "4.2.1 RLC entities\nAn RLC entity can be configured to perform data transfer in one of the following three modes: Transparent Mode (TM), Unacknowledged Mode (UM) or Acknowledged Mode (AM).",
+                ),
+            },
+        )()
+
+        ordered = _order_results_for_answer([weak, strong_evidence], "What are the three RLC modes?")
+
+        self.assertEqual(ordered[0].chunk["section"], "4.2.1")
+
+    def test_citation_snippet_uses_selected_evidence_line(self) -> None:
+        result = type(
+            "Result",
+            (),
+            {
+                "score": 2.0,
+                "chunk": _chunk(
+                    "4.2.1",
+                    "4.2.1 RLC entities\nRRC is generally in control of RLC configuration.\nAn RLC entity can be configured to perform data transfer in one of the following three modes: Transparent Mode (TM), Unacknowledged Mode (UM) or Acknowledged Mode (AM).",
+                ),
+            },
+        )()
+
+        citation = _citation(result, question="What are the three RLC modes?")
+
+        self.assertIn("three modes", citation["snippet"])
 
 
 def _chunk(section: str, text: str) -> dict[str, object]:
