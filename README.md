@@ -21,7 +21,7 @@ V1 builds the spec-RAG path only:
 - Parse and chunk documents with citation metadata.
 - Index chunks in Google Cloud RAG Engine backed by Vector Search 2.0.
 - Serve an API that returns conservative extractive answers with citations.
-- Evaluate retrieval and abstention quality on 26 RLC-focused questions.
+- Evaluate retrieval, abstention, and answer assertion quality on 26 RLC-focused questions.
 
 Structured lookup, agent routing, MCP, and deep production observability are documented as later phases, not part of the first executable cut.
 
@@ -137,7 +137,8 @@ V1 evaluation focuses on retrieval and abstention over the RLC specification:
 | Answerable recall@5 | Answer-supporting RLC clause appears in top 5 |
 | Abstention accuracy | Out-of-scope questions return no RLC evidence |
 | Citation support | Approximated by expected-section hits in the local baseline |
-| Answer-level groundedness | Added when generation uses gold answers / assertions |
+| Answer quality | Required assertion terms appear in grounded extractive answers |
+| Assertion group accuracy | Required answer-term groups matched across labeled questions |
 | Latency p50 / p95 | Measured end to end |
 | Cost per request | Estimated from model and retrieval calls |
 
@@ -150,7 +151,10 @@ Current local baseline:
 | Out-of-scope questions | 2 |
 | Answerable recall@5 | 1.000 |
 | Abstention accuracy | 1.000 |
-| Latency p50 / p95 | ~0.37 ms / ~0.56 ms |
+| Answer-quality questions | 4 |
+| Answer quality accuracy | 1.000 |
+| Answer assertion group accuracy | 1.000 |
+| Latency p50 / p95 | ~0.40 ms / ~0.60 ms |
 
 The initial dataset lives at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_retrieval_v1.jsonl).
 

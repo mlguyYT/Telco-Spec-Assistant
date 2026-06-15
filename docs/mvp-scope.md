@@ -14,7 +14,7 @@ The purpose is to prove that the system can ingest a real telecom standard, pres
 - Citation metadata schema.
 - Google Cloud RAG Engine / Vector Search indexing path.
 - Cloud Run API with `/ask` and `/health`.
-- About 20 pure retrieval evaluation questions.
+- 26 retrieval, precise-value, terminology-variant, and out-of-scope evaluation questions.
 - Basic latency and cost measurement in eval output.
 - Documentation of later structured lookup, agent, MCP, and observability phases.
 
@@ -35,7 +35,7 @@ The purpose is to prove that the system can ingest a real telecom standard, pres
 - Ingestion produces chunks with spec, release, version, section, source URL, and hash metadata.
 - `/ask` returns answers with citations for questions covered by the indexed RLC corpus.
 - `/ask` refuses or states insufficient evidence when the corpus does not support an answer.
-- Eval runner reports recall@5 and citation support for the RLC question set.
+- Eval runner reports recall@5, abstention accuracy, citation support, and answer assertion quality for the RLC question set.
 - No downloaded specifications or secrets are tracked by git.
 
 ## Human Decisions Before Implementation

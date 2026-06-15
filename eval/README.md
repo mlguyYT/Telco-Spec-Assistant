@@ -8,9 +8,12 @@ Metrics:
 - answerable recall@5 for questions with expected RLC clauses
 - abstention accuracy for out-of-scope questions
 - citation support, approximated by expected-section hits in the local baseline
-- answer-level groundedness, added once generation is enabled and gold answers are checked
+- answer quality over labeled questions, checked by required assertion terms in grounded extractive answers
+- assertion group accuracy for precise value and terminology-variant questions
 - p50 / p95 latency
 - estimated cost per request
+
+The first 20 questions measure retrieval coverage over RLC clauses. The final 6 harden the suite with precise field-value questions, terminology variants, and out-of-scope controls. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality.
 
 Run locally after ingestion:
 

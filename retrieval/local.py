@@ -138,6 +138,7 @@ def _normalize_token(token: str) -> str:
         "delivered": "deliver",
         "delivers": "deliver",
         "delivery": "deliver",
+        "failures": "failure",
         "pdus": "pdu",
         "polling": "poll",
         "reassembled": "reassembly",
@@ -151,6 +152,7 @@ def _normalize_token(token: str) -> str:
         "segments": "segment",
         "segmentation": "segment",
         "segmented": "segment",
+        "retransmissions": "retransmission",
     }
     if token in canonical:
         return canonical[token]
@@ -176,6 +178,12 @@ def _expand_domain_terms(tokens: list[str]) -> list[str]:
         expanded.extend(["polling", "poll"])
     if "sequence" in token_set:
         expanded.extend(["sn", "sequence"])
+    if "error" in token_set or "recovery" in token_set:
+        expanded.extend(["arq", "correction"])
+    if "failure" in token_set:
+        expanded.extend(["negative", "acknowledgment", "status", "nack"])
+    if "retransmission" in token_set:
+        expanded.extend(["retransmit", "negative", "acknowledgment"])
     return expanded
 
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from retrieval.local import LocalRetriever
+from serving.app import build_evidence_answer
 
 
 def main() -> None:
@@ -29,6 +30,10 @@ def main() -> None:
 
     print(f"questions: {report['question_count']}")
     print(f"recall@{args.top_k}: {report['recall_at_k']:.3f}")
+    if report["answer_quality_accuracy"] is not None:
+        print(f"answer_quality_accuracy: {report['answer_quality_accuracy']:.3f}")
+    if report["answer_assertion_group_accuracy"] is not None:
+        print(f"answer_assertion_group_accuracy: {report['answer_assertion_group_accuracy']:.3f}")
     print(f"latency_ms_p50: {report['latency_ms_p50']:.2f}")
     print(f"latency_ms_p95: {report['latency_ms_p95']:.2f}")
     print(f"wrote {report_path}")
@@ -47,6 +52,10 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
     answerable_hits = 0
     unanswerable_count = 0
     abstention_hits = 0
+    answer_quality_count = 0
+    answer_quality_hits = 0
+    assertion_group_count = 0
+    assertion_group_hits = 0
     for row in rows:
         expected_sections = _expected_sections(row)
         expected_answerable = _expected_answerable(row)
@@ -64,6 +73,13 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
             unanswerable_count += 1
             abstention_hits += int(hit)
         hits += int(hit)
+        answer = build_evidence_answer(retrieved, question=row["question"])
+        assertion_result = _check_required_terms(answer, row.get("required_answer_terms", []))
+        if assertion_result["required_group_count"]:
+            answer_quality_count += 1
+            answer_quality_hits += int(assertion_result["all_required_groups_hit"])
+            assertion_group_count += assertion_result["required_group_count"]
+            assertion_group_hits += assertion_result["required_group_hits"]
         results.append(
             {
                 "id": row["id"],
@@ -72,6 +88,8 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
                 "expected_sections": expected_sections,
                 "retrieved_sections": retrieved_sections,
                 "hit": hit,
+                "answer": answer,
+                "answer_assertions": assertion_result,
                 "top_score": retrieved[0].score if retrieved else 0.0,
             }
         )
@@ -84,6 +102,9 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
         "recall_at_k": hits / len(rows),
         "answerable_recall_at_k": answerable_hits / answerable_count if answerable_count else None,
         "abstention_accuracy": abstention_hits / unanswerable_count if unanswerable_count else None,
+        "answer_quality_question_count": answer_quality_count,
+        "answer_quality_accuracy": answer_quality_hits / answer_quality_count if answer_quality_count else None,
+        "answer_assertion_group_accuracy": assertion_group_hits / assertion_group_count if assertion_group_count else None,
         "latency_ms_p50": statistics.median(latencies),
         "latency_ms_p95": _percentile(latencies, 95),
         "citation_support": "approximated_by_expected_section_hit",
@@ -104,6 +125,37 @@ def _expected_answerable(row: dict[str, Any]) -> bool:
     if "expected_answerable" in row:
         return bool(row["expected_answerable"])
     return bool(_expected_sections(row))
+
+
+def _check_required_terms(answer: str | None, required_groups: Any) -> dict[str, Any]:
+    if not required_groups:
+        return {
+            "required_group_count": 0,
+            "required_group_hits": 0,
+            "all_required_groups_hit": False,
+            "groups": [],
+        }
+
+    normalized_answer = _normalize_answer(answer or "")
+    groups = []
+    hits = 0
+    for group in required_groups:
+        terms = [str(term).lower() for term in group]
+        missing = [term for term in terms if term not in normalized_answer]
+        hit = not missing
+        hits += int(hit)
+        groups.append({"terms": terms, "hit": hit, "missing": missing})
+
+    return {
+        "required_group_count": len(groups),
+        "required_group_hits": hits,
+        "all_required_groups_hit": hits == len(groups),
+        "groups": groups,
+    }
+
+
+def _normalize_answer(answer: str) -> str:
+    return " ".join(answer.lower().replace("-", " ").split())
 
 
 def _percentile(values: list[float], percentile: int) -> float:

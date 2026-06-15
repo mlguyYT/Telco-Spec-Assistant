@@ -95,6 +95,44 @@ class RetrievalEvalTests(unittest.TestCase):
             self.assertEqual(report["unanswerable_question_count"], 1)
             self.assertEqual(report["abstention_accuracy"], 1.0)
 
+    def test_evaluate_reports_answer_assertion_quality(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            chunks_path = root / "chunks.jsonl"
+            dataset_path = root / "dataset.jsonl"
+            chunks_path.write_text(
+                json.dumps(
+                    _chunk(
+                        "6.2.3.5",
+                        "6.2.3.5 Segment Offset (SO) field\n"
+                        "Length: 16 bits\n"
+                        "The SO field indicates the position of the RLC SDU segment in bytes within the original RLC SDU. "
+                        "The first byte of the original RLC SDU is referred by the SO field value "
+                        '"0000000000000000", i.e., numbering starts at zero.',
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            dataset_path.write_text(
+                json.dumps(
+                    {
+                        "id": "q1",
+                        "question": "What does the Segment Offset field encode?",
+                        "expected_sections": ["6.2.3.5"],
+                        "required_answer_terms": [["length", "16", "bit"], ["position"], ["zero"]],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            report = evaluate(dataset_path, chunks_path, top_k=1)
+
+            self.assertEqual(report["answer_quality_question_count"], 1)
+            self.assertEqual(report["answer_quality_accuracy"], 1.0)
+            self.assertEqual(report["answer_assertion_group_accuracy"], 1.0)
+
     def test_evidence_answer_refuses_low_score(self) -> None:
         result = type("Result", (), {"score": 0.1, "chunk": _chunk("4.4", "text")})()
 
@@ -153,6 +191,46 @@ class RetrievalEvalTests(unittest.TestCase):
         ordered = _order_results_for_answer([weak, strong_evidence], "What are the three RLC modes?")
 
         self.assertEqual(ordered[0].chunk["section"], "4.2.1")
+
+    def test_evidence_answer_selects_arq_status_and_retransmission_evidence(self) -> None:
+        retransmission = type(
+            "Result",
+            (),
+            {
+                "score": 20.0,
+                "chunk": _chunk(
+                    "5.3.2",
+                    "5.3.2 Retransmission\n"
+                    "The transmitting side can receive a negative acknowledgement for an RLC SDU.\n"
+                    "When receiving a negative acknowledgement for an RLC SDU by a STATUS PDU from its peer AM RLC entity, the transmitting side shall:\n"
+                    "-consider the RLC SDU for which a negative acknowledgement was received for retransmission.",
+                ),
+            },
+        )()
+        functions = type(
+            "Result",
+            (),
+            {
+                "score": 16.0,
+                "chunk": _chunk(
+                    "4.4",
+                    "4.4 Functions\n"
+                    "-error correction through ARQ (only for AM data transfer);\n"
+                    "-Protocol error detection (only for AM data transfer).",
+                ),
+            },
+        )()
+
+        answer = build_evidence_answer(
+            [retransmission, functions],
+            question="How does AM RLC do error recovery by retransmission after reception failure?",
+        )
+
+        self.assertIsNotNone(answer)
+        self.assertIn("ARQ", answer or "")
+        self.assertIn("STATUS PDU", answer or "")
+        self.assertIn("retransmission", answer or "")
+        self.assertNotIn("Protocol error detection", answer or "")
 
     def test_citation_snippet_uses_selected_evidence_line(self) -> None:
         result = type(
