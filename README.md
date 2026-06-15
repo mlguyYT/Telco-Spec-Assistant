@@ -101,8 +101,8 @@ Expected local flow:
 cp .env.example .env
 python scripts/fetch_specs.py --manifest specs/manifest.example.yaml
 python -m ingestion.run --manifest specs/manifest.example.yaml
-python -m serving.app
 python -m eval.run --dataset eval/datasets/rlc_retrieval_v1.jsonl
+python -m serving.app
 ```
 
 Expected deployment target:

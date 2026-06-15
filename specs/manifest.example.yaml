@@ -8,7 +8,7 @@ documents:
     release: "Rel-19"
     version: "v19.2.0"
     local_seed_filename: "38322-j20-rlc.docx"
-    source_url: "TODO_VERIFY_OFFICIAL_3GPP_ARCHIVE_URL"
+    source_url: "https://www.3gpp.org/ftp/Specs/archive/38_series/38.322/38322-j20.zip"
     source_archive_hint: "https://www.3gpp.org/ftp/Specs/archive/38_series/38.322/"
     redistribution: "Do not commit downloaded specification files."
     notes: "Seed metadata came from the local DOCX properties. Verify the official 3GPP download URL before publishing automation."
