@@ -21,7 +21,7 @@ V1 builds the spec-RAG path only:
 - Parse and chunk documents with citation metadata.
 - Index chunks in Google Cloud RAG Engine backed by Vector Search 2.0.
 - Serve an API that returns conservative evidence responses with citations.
-- Evaluate retrieval and grounded answer quality on about 20 RLC questions.
+- Evaluate retrieval and abstention quality on 26 RLC-focused questions.
 
 Structured lookup, agent routing, MCP, and deep production observability are documented as later phases, not part of the first executable cut.
 
@@ -91,32 +91,46 @@ telco-spec-assistant/
 └── README.md
 ```
 
-## Quickstart
+## Local Phase 1 Quickstart
 
-The implementation is scaffolded but not complete yet.
+Phase 1 runs locally before any cloud resources are required. It stages the RLC seed document into an ignored data directory, extracts clauses, writes citation chunks, and evaluates retrieval.
 
-Expected local flow:
-
-```bash
-cp .env.example .env
-python scripts/fetch_specs.py --manifest specs/manifest.example.yaml
-python -m ingestion.run --manifest specs/manifest.example.yaml
-python -m eval.run --dataset eval/datasets/rlc_retrieval_v1.jsonl
-python -m serving.app
-```
-
-Expected deployment target:
+Setup:
 
 ```bash
-cd infra
-terraform init
-terraform apply
-gcloud run deploy telco-spec-assistant --source ../serving --region us-central1
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## Evaluation
+Run with an existing local seed document:
 
-V1 evaluation focuses on retrieval over the RLC specification:
+```bash
+python scripts/run_phase1_local.py \
+  --seed-dir ../input/3gpp-documents \
+  --no-download
+```
+
+Or fetch from the official manifest URL:
+
+```bash
+python scripts/run_phase1_local.py
+```
+
+Generated files are written under `.data/`, which is ignored by git.
+
+Run the local API after the Phase 1 pipeline:
+
+```bash
+python -m serving.app --chunks .data/chunks/rlc_v1.jsonl
+curl -X POST http://127.0.0.1:8080/ask \
+  -H 'content-type: application/json' \
+  -d '{"q":"What are the three RLC modes?"}'
+```
+
+## Current Local Evaluation
+
+V1 evaluation focuses on retrieval and abstention over the RLC specification:
 
 | Metric | Target |
 |---|---|
@@ -127,7 +141,29 @@ V1 evaluation focuses on retrieval over the RLC specification:
 | Latency p50 / p95 | Measured end to end |
 | Cost per request | Estimated from model and retrieval calls |
 
+Current local baseline:
+
+| Metric | Value |
+|---|---:|
+| Questions | 26 |
+| Answerable questions | 24 |
+| Out-of-scope questions | 2 |
+| Answerable recall@5 | 1.000 |
+| Abstention accuracy | 1.000 |
+| Latency p50 / p95 | ~0.37 ms / ~0.56 ms |
+
 The initial dataset lives at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_retrieval_v1.jsonl).
+
+## Deployment Target
+
+Cloud deployment is Phase 2. The intended target is:
+
+```bash
+cd infra
+terraform init
+terraform apply
+gcloud run deploy telco-spec-assistant --source ../serving --region us-central1
+```
 
 ## Roadmap
 

@@ -10,6 +10,7 @@ from ingestion.chunker import chunks_from_document
 from ingestion.docx_parser import parse_docx
 from ingestion.manifest import load_manifest
 from ingestion.staging import stage_documents
+from scripts.run_phase1_local import main as run_phase1_main
 
 
 class IngestionTests(unittest.TestCase):
@@ -66,6 +67,9 @@ class IngestionTests(unittest.TestCase):
             ]:
                 self.assertIn(field, row)
             self.assertTrue(row["chunk_hash"].startswith("sha256:"))
+
+    def test_phase1_runner_imports(self) -> None:
+        self.assertTrue(callable(run_phase1_main))
 
 
 def _write_minimal_docx(path: Path) -> None:

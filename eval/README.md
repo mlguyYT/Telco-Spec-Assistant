@@ -17,3 +17,9 @@ Run locally after ingestion:
 ```bash
 python -m eval.run --dataset eval/datasets/rlc_retrieval_v1.jsonl --chunks .data/chunks/rlc_v1.jsonl
 ```
+
+Or run the full local Phase 1 pipeline:
+
+```bash
+python scripts/run_phase1_local.py --seed-dir ../input/3gpp-documents --no-download
+```
