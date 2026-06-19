@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -26,8 +27,11 @@ class AskHandler(BaseHTTPRequestHandler):
             self.send_error(404)
             return
 
-        length = int(self.headers.get("content-length", "0"))
-        payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+        payload = self._read_json_payload()
+        if payload is None:
+            self._json_response({"error": "invalid json"}, status=400)
+            return
+
         question = str(payload.get("q") or payload.get("question") or "").strip()
         if not question:
             self._json_response({"error": "missing question"}, status=400)
@@ -55,6 +59,16 @@ class AskHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         return
 
+    def _read_json_payload(self) -> dict[str, Any] | None:
+        length = int(self.headers.get("content-length", "0"))
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(payload, dict):
+            return None
+        return payload
+
     def _json_response(self, payload: dict[str, Any], status: int = 200) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
         self.send_response(status)
@@ -66,21 +80,62 @@ class AskHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the local evidence-serving API.")
-    parser.add_argument("--chunks", default=".data/chunks/rlc_v1.jsonl")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8080)
-    parser.add_argument("--top-k", type=int, default=5)
-    parser.add_argument("--min-score", type=float, default=1.0)
+    parser.add_argument("--chunks", default=os.environ.get("CHUNKS_PATH", ".data/chunks/rlc_v1.jsonl"))
+    parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8080")))
+    parser.add_argument("--top-k", type=int, default=int(os.environ.get("TOP_K", "5")))
+    parser.add_argument("--min-score", type=float, default=float(os.environ.get("MIN_SCORE", "1.0")))
     args = parser.parse_args()
 
-    handler = AskHandler
-    handler.retriever = LocalRetriever.from_jsonl(Path(args.chunks))
-    handler.top_k = args.top_k
-    handler.min_score = args.min_score
-
-    server = ThreadingHTTPServer((args.host, args.port), handler)
+    server = create_server(
+        chunks_path=Path(args.chunks),
+        host=args.host,
+        port=args.port,
+        top_k=args.top_k,
+        min_score=args.min_score,
+    )
     print(f"serving http://{args.host}:{args.port}")
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+
+
+def create_server(
+    chunks_path: Path,
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    top_k: int = 5,
+    min_score: float = 1.0,
+) -> ThreadingHTTPServer:
+    return create_server_from_retriever(
+        retriever=LocalRetriever.from_jsonl(chunks_path),
+        host=host,
+        port=port,
+        top_k=top_k,
+        min_score=min_score,
+    )
+
+
+def create_server_from_retriever(
+    retriever: LocalRetriever,
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    top_k: int = 5,
+    min_score: float = 1.0,
+) -> ThreadingHTTPServer:
+    handler = type(
+        "ConfiguredAskHandler",
+        (AskHandler,),
+        {
+            "retriever": retriever,
+            "top_k": top_k,
+            "min_score": min_score,
+        },
+    )
+    return ThreadingHTTPServer((host, port), handler)
 
 
 def _citation(result: Any, question: str = "") -> dict[str, Any]:

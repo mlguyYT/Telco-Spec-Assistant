@@ -128,6 +128,15 @@ curl -X POST http://127.0.0.1:8080/ask \
   -d '{"q":"What are the three RLC modes?"}'
 ```
 
+Smoke-test the deployable API container against the generated chunks:
+
+```bash
+docker build -t telco-spec-assistant .
+docker run --rm -p 8080:8080 \
+  -v "$PWD/.data/chunks:/data/chunks:ro" \
+  telco-spec-assistant
+```
+
 ## Current Local Evaluation
 
 V1 evaluation focuses on retrieval and abstention over the RLC specification:
@@ -160,14 +169,7 @@ The initial dataset lives at [eval/datasets/rlc_retrieval_v1.jsonl](eval/dataset
 
 ## Deployment Target
 
-Cloud deployment is Phase 2. The intended target is:
-
-```bash
-cd infra
-terraform init
-terraform apply
-gcloud run deploy telco-spec-assistant --source ../serving --region us-central1
-```
+Cloud deployment is Phase 2. The checked-in Dockerfile is the local Cloud Run-compatible serving shape; it expects chunk data to be supplied at runtime and does not bake downloaded specifications or generated chunks into the image. Terraform and managed retrieval resources are added in the next phase.
 
 ## Roadmap
 

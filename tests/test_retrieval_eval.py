@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 import tempfile
+import threading
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from eval.run import evaluate
 from retrieval.local import LocalRetriever, is_out_of_scope_query, tokenize
-from serving.app import _citation, _order_results_for_answer, build_evidence_answer
+from serving.app import _citation, _order_results_for_answer, build_evidence_answer, create_server_from_retriever
 
 
 class RetrievalEvalTests(unittest.TestCase):
@@ -249,6 +252,59 @@ class RetrievalEvalTests(unittest.TestCase):
 
         self.assertIn("three modes", citation["snippet"])
 
+    def test_serving_http_health_and_ask(self) -> None:
+        retriever = LocalRetriever(
+            [
+                _chunk(
+                    "4.2.1",
+                    "4.2.1 RLC entities\n"
+                    "An RLC entity can be configured to perform data transfer in one of the following three modes: "
+                    "Transparent Mode (TM), Unacknowledged Mode (UM) or Acknowledged Mode (AM).",
+                )
+            ]
+        )
+        server = create_server_from_retriever(retriever, host="127.0.0.1", port=0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            base_url = f"http://127.0.0.1:{server.server_port}"
+            health = _request_json(f"{base_url}/health")
+            answer = _request_json(
+                f"{base_url}/ask",
+                payload={"question": "What are the three RLC modes?"},
+            )
+
+            self.assertEqual(health["status"], "ok")
+            self.assertIn("Transparent Mode", answer["answer"])
+            self.assertEqual(answer["citations"][0]["section"], "4.2.1")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
+    def test_serving_http_rejects_invalid_json(self) -> None:
+        retriever = LocalRetriever([_chunk("4.4", "4.4 Functions\nsegmentation and reassembly")])
+        server = create_server_from_retriever(retriever, host="127.0.0.1", port=0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{server.server_port}/ask",
+                data=b"{not-json",
+                headers={"content-type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(urllib.error.HTTPError) as raised:
+                urllib.request.urlopen(request, timeout=5)
+
+            self.assertEqual(raised.exception.code, 400)
+            payload = json.loads(raised.exception.read().decode("utf-8"))
+            self.assertEqual(payload["error"], "invalid json")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
 
 def _chunk(section: str, text: str) -> dict[str, object]:
     return {
@@ -266,6 +322,21 @@ def _chunk(section: str, text: str) -> dict[str, object]:
         "document_id": "test",
         "chunk_index": 0,
     }
+
+
+def _request_json(url: str, payload: dict[str, object] | None = None) -> dict[str, object]:
+    if payload is None:
+        with urllib.request.urlopen(url, timeout=5) as response:
+            return json.loads(response.read().decode("utf-8"))
+
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"content-type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=5) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 if __name__ == "__main__":
