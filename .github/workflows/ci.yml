@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test and Hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests
+
+      - name: Compile Python modules
+        run: >-
+          python -m py_compile
+          ingestion/*.py
+          retrieval/*.py
+          eval/*.py
+          serving/*.py
+          scripts/fetch_specs.py
+          scripts/run_phase1_local.py
+
+      - name: Run eval smoke
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/telco-spec-ci
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("/tmp/telco-spec-ci")
+          chunk = {
+              "chunk_id": "ci:4.2.1",
+              "text": (
+                  "4.2.1 RLC entities\n"
+                  "An RLC entity can be configured to perform data transfer in one of the following three modes: "
+                  "Transparent Mode (TM), Unacknowledged Mode (UM) or Acknowledged Mode (AM)."
+              ),
+              "spec_id": "3GPP TS 38.322",
+              "release": "Rel-19",
+              "version": "v19.2.0",
+              "section": "4.2.1",
+              "section_title": "RLC entities",
+              "page": None,
+              "source_url": "https://example.invalid/spec.zip",
+              "chunk_hash": "sha256:ci",
+              "doc_title": "CI",
+              "document_id": "ci",
+              "chunk_index": 0,
+          }
+          question = {
+              "id": "ci-001",
+              "question": "What are the three RLC modes?",
+              "expected_sections": ["4.2.1"],
+              "required_answer_terms": [["Transparent Mode"], ["Unacknowledged Mode"], ["Acknowledged Mode"]],
+          }
+          (root / "chunks.jsonl").write_text(json.dumps(chunk) + "\n", encoding="utf-8")
+          (root / "dataset.jsonl").write_text(json.dumps(question) + "\n", encoding="utf-8")
+          PY
+          python -m eval.run \
+            --dataset /tmp/telco-spec-ci/dataset.jsonl \
+            --chunks /tmp/telco-spec-ci/chunks.jsonl \
+            --report /tmp/telco-spec-ci/report.json
+
+      - name: Check public repository hygiene
+        run: |
+          set -euo pipefail
+          if [ -n "$(git ls-files '*.docx' '*.pdf' '*.zip')" ]; then
+            echo "Downloaded standards documents must not be tracked."
+            git ls-files '*.docx' '*.pdf' '*.zip'
+            exit 1
+          fi
+          python - <<'PY'
+          from pathlib import Path
+
+          terms = [
+              "F" + "DE",
+              "res" + "ume",
+              "Forward" + " " + "Deployed",
+              "inter" + "view",
+              "job" + "-" + "application",
+              "target" + "-" + "role",
+              "hir" + "ing",
+              "Google" + " " + "roles",
+          ]
+          skipped_dirs = {".git", ".github", ".venv", "__pycache__"}
+          matches = []
+          for path in Path(".").rglob("*"):
+              if not path.is_file() or any(part in skipped_dirs for part in path.parts):
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8")
+              except UnicodeDecodeError:
+                  continue
+              for line_number, line in enumerate(text.splitlines(), start=1):
+                  if any(term in line for term in terms):
+                      matches.append(f"{path}:{line_number}:{line}")
+          if matches:
+              print("Public repo contains private positioning language.")
+              print("\n".join(matches))
+              raise SystemExit(1)
+          PY
+
+  container:
+    name: Container Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build serving image
+        run: docker build -t telco-spec-assistant:ci .

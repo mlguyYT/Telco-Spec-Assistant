@@ -4,6 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![Platform](https://img.shields.io/badge/Gemini%20Enterprise%20Agent%20Platform-4285F4)
+[![CI](https://github.com/mlguyYT/Telco-Spec-Assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/mlguyYT/Telco-Spec-Assistant/actions/workflows/ci.yml)
 
 Ask natural-language questions about telecom standards and get grounded, cited answers instead of plausible guesses. Each answer should point back to the exact specification, release, version, and clause that supports it.
 
