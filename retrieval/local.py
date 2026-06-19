@@ -4,9 +4,10 @@ import json
 import math
 import re
 from collections import Counter
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from retrieval.base import RetrievedChunk
 
 TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
 STOPWORDS = {
@@ -57,10 +58,7 @@ IN_SCOPE_TERMS = {
 }
 
 
-@dataclass(frozen=True)
-class RetrievalResult:
-    chunk: dict[str, Any]
-    score: float
+RetrievalResult = RetrievedChunk
 
 
 class LocalRetriever:
@@ -80,7 +78,7 @@ class LocalRetriever:
             raise ValueError(f"chunk file has no chunks: {path}")
         return cls(chunks)
 
-    def search(self, query: str, top_k: int = 5) -> list[RetrievalResult]:
+    def retrieve(self, query: str, k: int = 5) -> list[RetrievedChunk]:
         if is_out_of_scope_query(query):
             return []
 
@@ -88,14 +86,17 @@ class LocalRetriever:
         if not query_terms:
             return []
 
-        scored: list[RetrievalResult] = []
+        scored: list[RetrievedChunk] = []
         for index, chunk in enumerate(self.chunks):
             score = self._score(query_terms, index)
             score = _adjust_score_for_query_context(query_terms, chunk, score)
             if score > 0:
-                scored.append(RetrievalResult(chunk=chunk, score=score))
+                scored.append(_to_retrieved_chunk(chunk, score))
         scored.sort(key=lambda result: result.score, reverse=True)
-        return scored[:top_k]
+        return scored[:k]
+
+    def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
+        return self.retrieve(query, k=top_k)
 
     def _document_frequency(self) -> Counter[str]:
         counts: Counter[str] = Counter()
@@ -201,3 +202,9 @@ def _adjust_score_for_query_context(query_terms: list[str], chunk: dict[str, Any
     if {"missing", "receive"}.issubset(query_set) and section.startswith(("5.2", "5.3")):
         score *= 1.2
     return score
+
+
+def _to_retrieved_chunk(chunk: dict[str, Any], score: float) -> RetrievedChunk:
+    metadata = dict(chunk)
+    text = str(metadata.pop("text"))
+    return RetrievedChunk(text=text, score=score, metadata=metadata)

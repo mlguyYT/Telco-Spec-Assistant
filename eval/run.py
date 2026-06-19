@@ -7,7 +7,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from retrieval.local import LocalRetriever
+from retrieval.base import Retriever
+from retrieval.factory import get_retriever
 from serving.app import build_evidence_answer
 
 
@@ -30,6 +31,10 @@ def main() -> None:
 
     print(f"questions: {report['question_count']}")
     print(f"recall@{args.top_k}: {report['recall_at_k']:.3f}")
+    if report["non_paraphrase_recall_at_k"] is not None:
+        print(f"non_paraphrase_recall@{args.top_k}: {report['non_paraphrase_recall_at_k']:.3f}")
+    for subset, recall in report["subset_recall_at_k"].items():
+        print(f"{subset}_recall@{args.top_k}: {recall:.3f}")
     if report["answer_quality_accuracy"] is not None:
         print(f"answer_quality_accuracy: {report['answer_quality_accuracy']:.3f}")
     if report["answer_assertion_group_accuracy"] is not None:
@@ -40,7 +45,11 @@ def main() -> None:
 
 
 def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str, Any]:
-    retriever = LocalRetriever.from_jsonl(chunks_path)
+    retriever = get_retriever(chunks_path=chunks_path)
+    return evaluate_with_retriever(dataset_path=dataset_path, retriever=retriever, top_k=top_k)
+
+
+def evaluate_with_retriever(dataset_path: Path, retriever: Retriever, top_k: int = 5) -> dict[str, Any]:
     rows = [json.loads(line) for line in dataset_path.read_text(encoding="utf-8").splitlines() if line.strip()]
     if not rows:
         raise ValueError(f"dataset has no questions: {dataset_path}")
@@ -56,11 +65,15 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
     answer_quality_hits = 0
     assertion_group_count = 0
     assertion_group_hits = 0
+    non_paraphrase_count = 0
+    non_paraphrase_hits = 0
+    subset_counts: dict[str, int] = {}
+    subset_hits: dict[str, int] = {}
     for row in rows:
         expected_sections = _expected_sections(row)
         expected_answerable = _expected_answerable(row)
         start = time.perf_counter()
-        retrieved = retriever.search(row["question"], top_k=top_k)
+        retrieved = retriever.retrieve(row["question"], k=top_k)
         latency_ms = (time.perf_counter() - start) * 1000
         latencies.append(latency_ms)
         retrieved_sections = [item.chunk["section"] for item in retrieved]
@@ -73,6 +86,14 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
             unanswerable_count += 1
             abstention_hits += int(hit)
         hits += int(hit)
+        phrasing = row.get("phrasing")
+        if phrasing:
+            key = str(phrasing)
+            subset_counts[key] = subset_counts.get(key, 0) + 1
+            subset_hits[key] = subset_hits.get(key, 0) + int(hit)
+        else:
+            non_paraphrase_count += 1
+            non_paraphrase_hits += int(hit)
         answer = build_evidence_answer(retrieved, question=row["question"])
         assertion_result = _check_required_terms(answer, row.get("required_answer_terms", []))
         if assertion_result["required_group_count"]:
@@ -88,6 +109,7 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
                 "expected_sections": expected_sections,
                 "retrieved_sections": retrieved_sections,
                 "hit": hit,
+                "phrasing": row.get("phrasing"),
                 "answer": answer,
                 "answer_assertions": assertion_result,
                 "top_score": retrieved[0].score if retrieved else 0.0,
@@ -105,6 +127,13 @@ def evaluate(dataset_path: Path, chunks_path: Path, top_k: int = 5) -> dict[str,
         "answer_quality_question_count": answer_quality_count,
         "answer_quality_accuracy": answer_quality_hits / answer_quality_count if answer_quality_count else None,
         "answer_assertion_group_accuracy": assertion_group_hits / assertion_group_count if assertion_group_count else None,
+        "non_paraphrase_recall_at_k": (
+            non_paraphrase_hits / non_paraphrase_count if non_paraphrase_count else None
+        ),
+        "subset_recall_at_k": {
+            key: subset_hits[key] / count for key, count in sorted(subset_counts.items())
+        },
+        "subset_question_counts": dict(sorted(subset_counts.items())),
         "latency_ms_p50": statistics.median(latencies),
         "latency_ms_p95": _percentile(latencies, 95),
         "citation_support": "approximated_by_expected_section_hit",

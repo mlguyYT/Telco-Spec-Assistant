@@ -62,6 +62,10 @@ def main() -> None:
     print(f"answerable questions: {report['answerable_question_count']}")
     print(f"out-of-scope questions: {report['unanswerable_question_count']}")
     print(f"answerable recall@{args.top_k}: {report['answerable_recall_at_k']:.3f}")
+    if report["non_paraphrase_recall_at_k"] is not None:
+        print(f"non-paraphrase recall@{args.top_k}: {report['non_paraphrase_recall_at_k']:.3f}")
+    for subset, recall in report["subset_recall_at_k"].items():
+        print(f"{subset} recall@{args.top_k}: {recall:.3f}")
     print(f"abstention accuracy: {report['abstention_accuracy']:.3f}")
     if report["answer_quality_accuracy"] is not None:
         print(f"answer quality accuracy: {report['answer_quality_accuracy']:.3f}")

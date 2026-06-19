@@ -9,6 +9,7 @@ import urllib.request
 from pathlib import Path
 
 from eval.run import evaluate
+from retrieval.factory import get_retriever
 from retrieval.local import LocalRetriever, is_out_of_scope_query, tokenize
 from serving.app import _citation, _order_results_for_answer, build_evidence_answer, create_server_from_retriever
 
@@ -40,6 +41,15 @@ class RetrievalEvalTests(unittest.TestCase):
         results = retriever.search("What is the purpose of the polling mechanism in acknowledged mode RLC?")
 
         self.assertEqual(results[0].chunk["section"], "5.3.3.1")
+
+    def test_factory_returns_default_bm25_retriever(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            chunks_path = Path(tmp) / "chunks.jsonl"
+            chunks_path.write_text(json.dumps(_chunk("4.4", "4.4 Functions\nsegmentation")) + "\n", encoding="utf-8")
+
+            retriever = get_retriever(chunks_path=chunks_path)
+
+            self.assertIsInstance(retriever, LocalRetriever)
 
     def test_evaluate_reports_recall_at_k(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -73,6 +83,46 @@ class RetrievalEvalTests(unittest.TestCase):
             self.assertEqual(report["question_count"], 1)
             self.assertEqual(report["recall_at_k"], 1.0)
             self.assertEqual(report["answerable_recall_at_k"], 1.0)
+
+    def test_evaluate_reports_phrasing_subset_recall(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            chunks_path = root / "chunks.jsonl"
+            dataset_path = root / "dataset.jsonl"
+            chunks_path.write_text(
+                json.dumps(_chunk("5.3.2", "5.3.2 Retransmission\nRLC retransmission procedure.")) + "\n",
+                encoding="utf-8",
+            )
+            dataset_path.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "id": "q1",
+                                "question": "Which procedure handles retransmission?",
+                                "expected_sections": ["5.3.2"],
+                                "phrasing": "paraphrase",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "id": "q2",
+                                "question": "Which clause describes ciphering?",
+                                "expected_sections": ["5.3.2"],
+                                "phrasing": "paraphrase",
+                            }
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            report = evaluate(dataset_path, chunks_path, top_k=1)
+
+            self.assertEqual(report["subset_question_counts"]["paraphrase"], 2)
+            self.assertEqual(report["subset_recall_at_k"]["paraphrase"], 0.5)
+            self.assertIsNone(report["non_paraphrase_recall_at_k"])
 
     def test_evaluate_counts_out_of_scope_abstention(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -5,6 +5,8 @@ V1 evaluation uses pure spec-retrieval questions over 3GPP TS 38.322.
 Metrics:
 
 - retrieval recall@5
+- paraphrase recall@5 for deliberately hard wording variants
+- non-paraphrase recall@5 for the original baseline rows
 - answerable recall@5 for questions with expected RLC clauses
 - abstention accuracy for out-of-scope questions
 - citation support, approximated by expected-section hits in the local baseline
@@ -13,7 +15,7 @@ Metrics:
 - p50 / p95 latency
 - estimated cost per request
 
-The first 20 questions measure retrieval coverage over RLC clauses. The final 6 harden the suite with precise field-value questions, terminology variants, and out-of-scope controls. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality.
+The first 20 questions measure retrieval coverage over RLC clauses. The next 6 harden the suite with precise field-value questions, terminology variants, and out-of-scope controls. The final 5 are answerable paraphrase questions tagged with `"phrasing": "paraphrase"`; they are designed to expose wording robustness gaps in the local BM25 baseline before adding optional managed vector retrieval. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality.
 
 Run locally after ingestion:
 

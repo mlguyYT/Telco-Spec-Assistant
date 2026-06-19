@@ -8,11 +8,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from retrieval.local import LocalRetriever, tokenize
+from retrieval.base import Retriever
+from retrieval.factory import get_retriever
+from retrieval.local import tokenize
 
 
 class AskHandler(BaseHTTPRequestHandler):
-    retriever: LocalRetriever
+    retriever: Retriever
     top_k: int
     min_score: float
 
@@ -37,7 +39,7 @@ class AskHandler(BaseHTTPRequestHandler):
             self._json_response({"error": "missing question"}, status=400)
             return
 
-        results = self.retriever.search(question, top_k=self.top_k)
+        results = self.retriever.retrieve(question, k=self.top_k)
         answer = build_evidence_answer(results, question=question, min_score=self.min_score)
         if answer is None:
             self._json_response(
@@ -111,7 +113,7 @@ def create_server(
     min_score: float = 1.0,
 ) -> ThreadingHTTPServer:
     return create_server_from_retriever(
-        retriever=LocalRetriever.from_jsonl(chunks_path),
+        retriever=get_retriever(chunks_path=chunks_path),
         host=host,
         port=port,
         top_k=top_k,
@@ -120,7 +122,7 @@ def create_server(
 
 
 def create_server_from_retriever(
-    retriever: LocalRetriever,
+    retriever: Retriever,
     host: str = "127.0.0.1",
     port: int = 8080,
     top_k: int = 5,
