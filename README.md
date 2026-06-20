@@ -12,7 +12,7 @@ Ask natural-language questions about telecom standards and get grounded, cited a
 
 Telecom standards are precise, versioned, and full of details that general LLMs often get wrong. This project starts with 3GPP TS 38.322, the NR Radio Link Control protocol specification, and builds a small but credible retrieval system that answers from source material with traceable citations.
 
-The first release is intentionally small: one seed corpus, clause-aware chunking, vector retrieval, cited answers, and a retrieval-focused evaluation set. The broader architecture documents how the same system can grow into a deployed GenAI application with structured lookup, agent tools, MCP, observability, and domain-specific integrations.
+The first release is intentionally small: one seed corpus, clause-aware chunking, local retrieval, cited answers, and a retrieval-focused evaluation set. The broader architecture documents how the same system can grow into a deployed GenAI application with managed vector retrieval, structured lookup, agent tools, MCP, observability, and domain-specific integrations.
 
 ## V1 Scope
 
@@ -20,7 +20,7 @@ V1 builds the spec-RAG path only:
 
 - Fetch public specifications from a manifest.
 - Parse and chunk documents with citation metadata.
-- Index chunks in Google Cloud RAG Engine backed by Vector Search 2.0.
+- Run a local BM25 baseline and optionally compare it with Vertex AI Vector Search.
 - Serve an API that returns conservative extractive answers with citations.
 - Evaluate retrieval, paraphrase robustness, abstention, and answer assertion quality on 31 RLC-focused questions.
 
@@ -176,12 +176,12 @@ The dataset lives at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_re
 
 ## Deployment Target
 
-Cloud deployment is Phase 2. The checked-in Dockerfile is the local Cloud Run-compatible serving shape; it expects chunk data to be supplied at runtime and does not bake downloaded specifications or generated chunks into the image. Terraform and managed retrieval resources are added in the next phase.
+Cloud deployment is Phase 2. The checked-in Dockerfile is the local Cloud Run-compatible serving shape; it expects chunk data to be supplied at runtime and does not bake downloaded specifications or generated chunks into the image. Optional Vertex AI Vector Search scripts let the same clause chunks be embedded, indexed, compared against BM25, and torn down after testing.
 
 ## Roadmap
 
 - [ ] Phase 1: Spec RAG over 3GPP TS 38.322 with cited answers and retrieval eval.
-- [ ] Phase 2: Expand corpus to a small multi-spec telecom set.
+- [ ] Phase 2: Add optional Vertex AI Vector Search retrieval and compare recall against BM25.
 - [ ] Phase 3: Add BigQuery structured lookup for exact parameter questions.
 - [ ] Phase 4: Add ADK or LangGraph tool routing.
 - [ ] Phase 5: Expose the tools through an MCP server.

@@ -14,5 +14,7 @@ def get_retriever(chunks_path: Path | None = None, kind: str | None = None) -> R
             chunks_path = Path(os.environ.get("CHUNKS_PATH", ".data/chunks/rlc_v1.jsonl"))
         return LocalRetriever.from_jsonl(chunks_path)
     if retriever_kind == "vertex":
-        raise RuntimeError("RETRIEVER=vertex is not implemented yet. Use RETRIEVER=bm25.")
+        from retrieval.vertex import VertexRetriever
+
+        return VertexRetriever(chunks_path=chunks_path)
     raise ValueError(f"unsupported retriever: {retriever_kind}")

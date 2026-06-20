@@ -38,8 +38,7 @@ jobs:
           retrieval/*.py
           eval/*.py
           serving/*.py
-          scripts/fetch_specs.py
-          scripts/run_phase1_local.py
+          scripts/*.py
 
       - name: Run eval smoke
         run: |

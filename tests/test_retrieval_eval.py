@@ -4,6 +4,7 @@ import json
 import tempfile
 import threading
 import unittest
+from unittest import mock
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -11,6 +12,7 @@ from pathlib import Path
 from eval.run import evaluate
 from retrieval.factory import get_retriever
 from retrieval.local import LocalRetriever, is_out_of_scope_query, tokenize
+from retrieval.vertex import _load_chunk_map, _neighbor_id, _required_env
 from serving.app import _citation, _order_results_for_answer, build_evidence_answer, create_server_from_retriever
 
 
@@ -50,6 +52,44 @@ class RetrievalEvalTests(unittest.TestCase):
             retriever = get_retriever(chunks_path=chunks_path)
 
             self.assertIsInstance(retriever, LocalRetriever)
+
+    def test_factory_rejects_unknown_retriever(self) -> None:
+        with self.assertRaises(ValueError):
+            get_retriever(kind="unknown")
+
+    def test_vertex_helpers_load_chunks_without_cloud_dependencies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            chunks_path = Path(tmp) / "chunks.jsonl"
+            chunks_path.write_text(json.dumps(_chunk("4.4", "4.4 Functions\nsegmentation")) + "\n", encoding="utf-8")
+
+            chunks = _load_chunk_map(chunks_path)
+
+            self.assertEqual(chunks["test:4.4"]["section"], "4.4")
+
+    def test_vertex_helper_detects_duplicate_chunk_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            chunks_path = Path(tmp) / "chunks.jsonl"
+            chunk = _chunk("4.4", "4.4 Functions\nsegmentation")
+            chunks_path.write_text(json.dumps(chunk) + "\n" + json.dumps(chunk) + "\n", encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                _load_chunk_map(chunks_path)
+
+    def test_vertex_helper_reads_neighbor_id_shapes(self) -> None:
+        direct = type("Neighbor", (), {"id": "chunk-a"})()
+        nested = type(
+            "Neighbor",
+            (),
+            {"id": "", "datapoint": type("Datapoint", (), {"datapoint_id": "chunk-b"})()},
+        )()
+
+        self.assertEqual(_neighbor_id(direct), "chunk-a")
+        self.assertEqual(_neighbor_id(nested), "chunk-b")
+
+    def test_vertex_required_env_reports_missing_value(self) -> None:
+        with mock.patch.dict("os.environ", {}, clear=True):
+            with self.assertRaises(RuntimeError):
+                _required_env("GCP_PROJECT_ID")
 
     def test_evaluate_reports_recall_at_k(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
