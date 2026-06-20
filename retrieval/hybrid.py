@@ -13,12 +13,16 @@ class HybridRetriever:
         self,
         retrievers: list[Retriever],
         *,
+        retriever_weights: list[float] | None = None,
         source_k: int | None = None,
         rrf_c: int | None = None,
     ) -> None:
         if not retrievers:
             raise ValueError("HybridRetriever requires at least one retriever")
+        if retriever_weights is not None and len(retriever_weights) != len(retrievers):
+            raise ValueError("retriever_weights must match retrievers")
         self.retrievers = retrievers
+        self.retriever_weights = retriever_weights or [1.0] * len(retrievers)
         self.source_k = source_k or int(os.environ.get("HYBRID_SOURCE_K", "20"))
         self.rrf_c = rrf_c or int(os.environ.get("HYBRID_RRF_C", str(DEFAULT_RRF_C)))
 
@@ -30,10 +34,10 @@ class HybridRetriever:
         fused: dict[str, RetrievedChunk] = {}
         scores: dict[str, float] = {}
         best_rank: dict[str, int] = {}
-        for retriever in self.retrievers:
+        for retriever, weight in zip(self.retrievers, self.retriever_weights):
             for rank, chunk in enumerate(retriever.retrieve(query, k=source_k), start=1):
                 chunk_id = _chunk_id(chunk)
-                scores[chunk_id] = scores.get(chunk_id, 0.0) + 1.0 / (self.rrf_c + rank)
+                scores[chunk_id] = scores.get(chunk_id, 0.0) + weight / (self.rrf_c + rank)
                 if chunk_id not in fused or rank < best_rank[chunk_id]:
                     fused[chunk_id] = chunk
                     best_rank[chunk_id] = rank

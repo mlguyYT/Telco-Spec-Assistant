@@ -86,15 +86,16 @@ def main() -> None:
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8080")))
     parser.add_argument("--top-k", type=int, default=int(os.environ.get("TOP_K", "5")))
-    parser.add_argument("--min-score", type=float, default=float(os.environ.get("MIN_SCORE", "1.0")))
+    parser.add_argument("--min-score", default=os.environ.get("MIN_SCORE", "auto"))
     args = parser.parse_args()
+    retriever_kind = os.environ.get("RETRIEVER", "bm25")
 
     server = create_server(
         chunks_path=Path(args.chunks),
         host=args.host,
         port=args.port,
         top_k=args.top_k,
-        min_score=args.min_score,
+        min_score=_resolve_min_score(args.min_score, retriever_kind),
     )
     print(f"serving http://{args.host}:{args.port}")
     try:
@@ -110,8 +111,10 @@ def create_server(
     host: str = "127.0.0.1",
     port: int = 8080,
     top_k: int = 5,
-    min_score: float = 1.0,
+    min_score: float | None = None,
 ) -> ThreadingHTTPServer:
+    if min_score is None:
+        min_score = _default_min_score(os.environ.get("RETRIEVER", "bm25"))
     return create_server_from_retriever(
         retriever=get_retriever(chunks_path=chunks_path),
         host=host,
@@ -138,6 +141,23 @@ def create_server_from_retriever(
         },
     )
     return ThreadingHTTPServer((host, port), handler)
+
+
+def _resolve_min_score(value: str | float | None, retriever_kind: str) -> float:
+    if value is None:
+        return _default_min_score(retriever_kind)
+    if isinstance(value, (float, int)):
+        return float(value)
+    normalized = value.strip().lower()
+    if normalized == "auto":
+        return _default_min_score(retriever_kind)
+    return float(value)
+
+
+def _default_min_score(retriever_kind: str) -> float:
+    if retriever_kind.lower() == "bm25":
+        return 1.0
+    return 0.0
 
 
 def _citation(result: Any, question: str = "") -> dict[str, Any]:

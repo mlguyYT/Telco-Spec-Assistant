@@ -174,6 +174,8 @@ The paraphrase subset is intentionally difficult for the local BM25 baseline. It
 
 The dataset lives at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_retrieval_v1.jsonl).
 
+See [docs/retrieval-results.md](docs/retrieval-results.md) for the BM25, Vertex AI Vector Search, and hybrid retrieval comparison.
+
 ## Deployment Target
 
 Cloud deployment is Phase 2. The checked-in Dockerfile is the local Cloud Run-compatible serving shape; it expects chunk data to be supplied at runtime and does not bake downloaded specifications or generated chunks into the image. Optional Vertex AI Vector Search scripts let the same clause chunks be embedded, indexed, compared against BM25, and torn down after testing.

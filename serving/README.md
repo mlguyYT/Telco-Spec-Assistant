@@ -26,7 +26,7 @@ Runtime settings can be provided through flags or environment variables:
 | `HOST` | `127.0.0.1` | Bind address |
 | `PORT` | `8080` | HTTP port |
 | `TOP_K` | `5` | Retrieval depth |
-| `MIN_SCORE` | `1.0` | Minimum top retrieval score |
+| `MIN_SCORE` | `auto` | Minimum top retrieval score. Auto keeps BM25 at `1.0` and uses `0.0` for rank/vector retrievers. |
 
 Run the same API in a local container without baking generated chunks into the image:
 

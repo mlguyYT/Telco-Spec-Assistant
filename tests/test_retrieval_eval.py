@@ -15,7 +15,13 @@ from retrieval.factory import get_retriever
 from retrieval.hybrid import HybridRetriever
 from retrieval.local import LocalRetriever, is_out_of_scope_query, tokenize
 from retrieval.vertex import VertexRetriever, _load_chunk_map, _neighbor_id, _required_env
-from serving.app import _citation, _order_results_for_answer, build_evidence_answer, create_server_from_retriever
+from serving.app import (
+    _citation,
+    _order_results_for_answer,
+    _resolve_min_score,
+    build_evidence_answer,
+    create_server_from_retriever,
+)
 
 
 class RetrievalEvalTests(unittest.TestCase):
@@ -75,6 +81,15 @@ class RetrievalEvalTests(unittest.TestCase):
         self.assertEqual([item.metadata["chunk_id"] for item in results], ["b", "a", "c"])
         self.assertGreater(results[0].score, results[1].score)
         self.assertLess(results[0].score, 1.0)
+
+    def test_hybrid_retriever_supports_rank_based_weights(self) -> None:
+        first = _StaticRetriever([_retrieved("a", "4.1", "first source rank one", 1000.0)])
+        second = _StaticRetriever([_retrieved("b", "4.2", "second source rank one", 0.01)])
+        retriever = HybridRetriever([first, second], retriever_weights=[1.0, 1.02], source_k=1, rrf_c=60)
+
+        results = retriever.retrieve("rank fusion query", k=2)
+
+        self.assertEqual([item.metadata["chunk_id"] for item in results], ["b", "a"])
 
     def test_hybrid_retriever_applies_out_of_scope_guard_before_children(self) -> None:
         child = _FailingRetriever()
@@ -274,6 +289,12 @@ class RetrievalEvalTests(unittest.TestCase):
         result = type("Result", (), {"score": 0.1, "chunk": _chunk("4.4", "text")})()
 
         self.assertIsNone(build_evidence_answer([result], min_score=1.0))
+
+    def test_min_score_auto_respects_retriever_score_scales(self) -> None:
+        self.assertEqual(_resolve_min_score("auto", "bm25"), 1.0)
+        self.assertEqual(_resolve_min_score("auto", "vertex"), 0.0)
+        self.assertEqual(_resolve_min_score("auto", "hybrid"), 0.0)
+        self.assertEqual(_resolve_min_score("0.2", "hybrid"), 0.2)
 
     def test_evidence_answer_cites_top_clause(self) -> None:
         result = type(
