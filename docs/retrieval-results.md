@@ -58,6 +58,8 @@ After retrieval tuning, the same 176-question multi-spec evaluation was run with
 
 Answer quality is currently measured on 8 labeled questions using required assertion groups with light normalization for morphology and accepted wording variants. Full-question accuracy requires every required group to match. Assertion group accuracy counts each group independently, so it better shows partial correctness on multi-part answers. In this run, all 8 labeled questions retrieved an expected supporting clause; the remaining answer-quality miss is an AM RLC retransmission answer that did not explicitly mention ARQ.
 
+A follow-up prompt check confirmed that Gemini includes ARQ when the retrieved context contains the RLC functions clause that names ARQ. A local BM25-only smoke for the same question did not retrieve that clause, so future verification of this case should use the tuned hybrid retriever or an eval fixture that includes both the ARQ functions clause and the retransmission procedure clause.
+
 ## RLC-Only Historical Setup
 
 The evaluation set is intentionally small and focused on one specification, so the numbers show direction rather than statistical precision. The main signal is the retrieval tradeoff: lexical retrieval is strong on exact wording, vector retrieval is strong on paraphrases, and rank-fused hybrid retrieval combines both.

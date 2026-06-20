@@ -99,6 +99,9 @@ def _prompt(question: str, evidence: list[dict[str, Any]]) -> str:
     return (
         "You are a telecom standards assistant. Answer only from the provided excerpts. "
         "Do not use outside knowledge. If the excerpts do not support the answer, return supported=false. "
+        "Preserve important technical terms, acronyms, field names, procedure names, and quoted values from the excerpts "
+        "when they are relevant to the question. If an excerpt names a mechanism or acronym that directly answers the "
+        "question, include that term in the answer. Do not replace specification terms only with broad paraphrases. "
         "Use only citation_ids from the provided excerpts. Return strict JSON with keys: "
         "supported, answer, citation_ids.\n\n"
         f"Question: {question}\n\n"
@@ -143,4 +146,3 @@ def _required_env(name: str) -> str:
     if not value:
         raise RuntimeError(f"{name} is required")
     return value
-

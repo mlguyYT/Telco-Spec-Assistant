@@ -12,7 +12,7 @@ from pathlib import Path
 from eval.run import _check_required_terms, evaluate, evaluate_with_retriever
 from generation.base import GeneratedAnswer
 from generation.factory import get_generator
-from generation.gemini import GeminiGenerator
+from generation.gemini import GeminiGenerator, _prompt
 from retrieval.embedding import _effective_batch_size
 from retrieval.factory import get_retriever
 from retrieval.hybrid import HybridRetriever
@@ -584,6 +584,80 @@ class RetrievalEvalTests(unittest.TestCase):
 
         self.assertFalse(result.supported)
         self.assertEqual(result.citations, [])
+
+    def test_gemini_prompt_preserves_spec_terms(self) -> None:
+        prompt = _prompt(
+            question="How does AM RLC do error recovery by retransmission after reception failure?",
+            evidence=[
+                {
+                    "citation_id": "C1",
+                    "spec_id": "3GPP TS 38.322",
+                    "version": "v19.2.0",
+                    "section": "4.4",
+                    "section_title": "Functions",
+                    "text": "-error correction through ARQ (only for AM data transfer);",
+                }
+            ],
+        )
+
+        self.assertIn("Preserve important technical terms", prompt)
+        self.assertIn("Do not replace specification terms only with broad paraphrases", prompt)
+        self.assertIn("ARQ", prompt)
+
+    def test_arq_answer_quality_regression(self) -> None:
+        answer_without_arq = (
+            "After a reception failure, AM RLC sends STATUS PDU feedback with a negative acknowledgement "
+            "and considers the RLC SDU for retransmission."
+        )
+        answer_with_arq = (
+            "AM RLC performs error correction through ARQ; STATUS PDU feedback can carry a negative "
+            "acknowledgement, and the transmitting side considers the RLC SDU for retransmission."
+        )
+        required = [["arq"], ["status pdu"], ["negative acknowledgement"], ["retransmission"]]
+
+        self.assertFalse(_check_required_terms(answer_without_arq, required)["all_required_groups_hit"])
+        self.assertTrue(_check_required_terms(answer_with_arq, required)["all_required_groups_hit"])
+
+    def test_gemini_generator_preserves_arq_when_evidence_contains_it(self) -> None:
+        generator = object.__new__(GeminiGenerator)
+        generator.client = _FakeGenAIClient(
+            {
+                "supported": True,
+                "answer": (
+                    "AM RLC performs error correction through ARQ. A STATUS PDU can carry a negative "
+                    "acknowledgement, after which the transmitting side considers the RLC SDU for retransmission."
+                ),
+                "citation_ids": ["C1", "C2"],
+            }
+        )
+        generator.model_name = "test-model"
+        generator.generate_content_config = lambda **kwargs: kwargs
+
+        result = generator.generate(
+            "How does AM RLC do error recovery by retransmission after reception failure?",
+            [
+                _retrieved(
+                    "arq-functions",
+                    "4.4",
+                    "4.4 Functions\n-error correction through ARQ (only for AM data transfer);",
+                    1.0,
+                ),
+                _retrieved(
+                    "status-retransmission",
+                    "5.3.2",
+                    "5.3.2 Retransmission\nWhen receiving a negative acknowledgement by a STATUS PDU, the transmitting side considers the RLC SDU for retransmission.",
+                    0.9,
+                ),
+            ],
+        )
+
+        self.assertTrue(result.supported)
+        self.assertTrue(
+            _check_required_terms(
+                result.answer,
+                [["arq"], ["status pdu"], ["negative acknowledgement"], ["retransmission"]],
+            )["all_required_groups_hit"]
+        )
 
     def test_serving_http_rejects_invalid_json(self) -> None:
         retriever = LocalRetriever([_chunk("4.4", "4.4 Functions\nsegmentation and reassembly")])
