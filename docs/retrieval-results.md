@@ -48,6 +48,16 @@ These values are now the default hybrid settings: `HYBRID_SOURCE_K=100`, `HYBRID
 
 The managed endpoint verification matched the offline tuning result at recall@5: answerable `0.970`, non-paraphrase `0.970`, paraphrase `1.000`, MAC `0.983`, RLC `1.000`, RRC `0.943`, and abstention `1.000`.
 
+## Generated Answer Verification
+
+After retrieval tuning, the same 176-question multi-spec evaluation was run with tuned Hybrid RRF retrieval and Gemini generation. The generator received only retrieved chunks and was required to cite retrieved chunk IDs. Out-of-scope questions with no retrieved evidence were refused without a generation call.
+
+| Retriever | Generator | Model | Answerable recall@5 | Answer citation accuracy | Answer refusal accuracy | Answer quality accuracy | Assertion group accuracy | Latency p50 / p95 |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| Hybrid RRF | Gemini | `gemini-2.5-flash` | 0.970 | 0.929 | 1.000 | 0.375 | 0.792 | 547 ms / 1202 ms |
+
+Answer quality is currently measured on 8 labeled questions using strict lexical assertion groups. Full-question accuracy requires every required group to match. Assertion group accuracy counts each group independently, so it better shows partial correctness on multi-part answers. The main remaining gaps are answer phrasing and label robustness, not retrieval: all 8 labeled questions retrieved an expected supporting clause in this run.
+
 ## RLC-Only Historical Setup
 
 The evaluation set is intentionally small and focused on one specification, so the numbers show direction rather than statistical precision. The main signal is the retrieval tradeoff: lexical retrieval is strong on exact wording, vector retrieval is strong on paraphrases, and rank-fused hybrid retrieval combines both.
@@ -73,6 +83,10 @@ The evaluation set is intentionally small and focused on one specification, so t
 | Non-paraphrase recall@5 | Same recall metric on questions without paraphrase tagging. |
 | Paraphrase recall@5 | Same recall metric on deliberately reworded questions. |
 | Abstention accuracy | Out-of-scope questions return no evidence. |
+| Answer citation accuracy | Generated citations include at least one expected supporting clause. |
+| Answer refusal accuracy | Out-of-scope questions produce an unsupported/refusal answer. |
+| Answer quality accuracy | Labeled questions where every required answer-term group is present. |
+| Assertion group accuracy | Required answer-term groups matched across labeled questions. |
 | Latency p50 / p95 | End-to-end retrieval latency measured by the eval runner. |
 
 ## RLC-Only Historical Results
