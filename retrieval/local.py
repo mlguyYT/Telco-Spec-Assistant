@@ -218,15 +218,25 @@ def _expand_domain_terms(tokens: list[str]) -> list[str]:
 
 def _adjust_score_for_query_context(query_terms: list[str], chunk: dict[str, Any], score: float) -> float:
     section = str(chunk.get("section", ""))
+    spec_id = str(chunk.get("spec_id", ""))
+    text = str(chunk.get("text", "")).lower()
     query_set = set(query_terms)
     asks_for_format = bool({"field", "header", "format", "bit"}.intersection(query_set))
+    asks_rlc = "rlc" in query_set
+    asks_error_recovery = bool({"error", "recovery", "failure", "retransmission"}.intersection(query_set))
 
     if section.startswith("6.2.3") and not asks_for_format:
         score *= 0.65
+    if asks_rlc and spec_id == "3GPP TS 38.322":
+        score *= 1.35
+    if asks_rlc and spec_id in {"3GPP TS 38.321", "3GPP TS 38.331"}:
+        score *= 0.75
     if {"purpose", "segment"}.issubset(query_set) and str(chunk.get("section")) == "4.4":
         score *= 2.0
     if "function" in query_set and str(chunk.get("section")) == "4.4":
         score *= 2.0
+    if asks_rlc and asks_error_recovery and section == "4.4" and "arq" in text:
+        score *= 2.5
     if {"missing", "receive"}.issubset(query_set) and section.startswith(("5.2", "5.3")):
         score *= 1.2
     return score

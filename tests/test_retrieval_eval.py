@@ -57,6 +57,38 @@ class RetrievalEvalTests(unittest.TestCase):
 
         self.assertEqual(results[0].chunk["section"], "5.3.3.1")
 
+    def test_local_retriever_keeps_arq_functions_for_rlc_error_recovery(self) -> None:
+        retriever = LocalRetriever(
+            [
+                _chunk(
+                    "4.4",
+                    "4.4 Functions\n"
+                    "The following functions are supported by the RLC sub layer:\n"
+                    "-error correction through ARQ (only for AM data transfer);",
+                ),
+                _chunk(
+                    "5.3.2",
+                    "5.3.2 Retransmission\n"
+                    "When receiving a negative acknowledgement for an RLC SDU by a STATUS PDU from its peer AM RLC entity, "
+                    "the transmitting side shall consider the RLC SDU for retransmission.",
+                ),
+                {
+                    **_chunk(
+                        "5.3.10.4",
+                        "5.3.10.4 RLF cause determination\n"
+                        "The UE declares radio link failure due to T310 expiry and random access problem indication.",
+                    ),
+                    "spec_id": "3GPP TS 38.331",
+                    "document_id": "rrc",
+                    "chunk_id": "rrc:5.3.10.4",
+                },
+            ]
+        )
+
+        results = retriever.retrieve("How does AM RLC do error recovery by retransmission after reception failure?", k=2)
+
+        self.assertEqual({result.chunk["section"] for result in results}, {"4.4", "5.3.2"})
+
     def test_factory_returns_default_bm25_retriever(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             chunks_path = Path(tmp) / "chunks.jsonl"
