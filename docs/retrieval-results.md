@@ -54,9 +54,9 @@ After retrieval tuning, the same 176-question multi-spec evaluation was run with
 
 | Retriever | Generator | Model | Answerable recall@5 | Answer citation accuracy | Answer refusal accuracy | Answer quality accuracy | Assertion group accuracy | Latency p50 / p95 |
 |---|---|---|---:|---:|---:|---:|---:|---:|
-| Hybrid RRF | Gemini | `gemini-2.5-flash` | 0.970 | 0.929 | 1.000 | 0.375 | 0.792 | 547 ms / 1202 ms |
+| Hybrid RRF | Gemini | `gemini-2.5-flash` | 0.970 | 0.929 | 1.000 | 0.875 | 0.957 | 547 ms / 1202 ms |
 
-Answer quality is currently measured on 8 labeled questions using strict lexical assertion groups. Full-question accuracy requires every required group to match. Assertion group accuracy counts each group independently, so it better shows partial correctness on multi-part answers. The main remaining gaps are answer phrasing and label robustness, not retrieval: all 8 labeled questions retrieved an expected supporting clause in this run.
+Answer quality is currently measured on 8 labeled questions using required assertion groups with light normalization for morphology and accepted wording variants. Full-question accuracy requires every required group to match. Assertion group accuracy counts each group independently, so it better shows partial correctness on multi-part answers. In this run, all 8 labeled questions retrieved an expected supporting clause; the remaining answer-quality miss is an AM RLC retransmission answer that did not explicitly mention ARQ.
 
 ## RLC-Only Historical Setup
 

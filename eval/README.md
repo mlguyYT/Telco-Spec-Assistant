@@ -17,7 +17,7 @@ Metrics:
 - p50 / p95 latency
 - estimated cost per request
 
-The multi-spec dataset has 176 rows. It combines the original RLC retrieval, precise-value, terminology-variant, out-of-scope, and paraphrase rows with broader MAC/RRC clause-retrieval coverage. The answerable rows cover 60 MAC questions, 39 RLC questions, and 70 RRC questions; the remaining rows are out-of-scope controls. The MAC and RRC counts include smoke retrieval rows for high-signal clauses. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality. These labels currently cover a representative subset, not every retrieval row.
+The multi-spec dataset has 176 rows. It combines the original RLC retrieval, precise-value, terminology-variant, out-of-scope, and paraphrase rows with broader MAC/RRC clause-retrieval coverage. The answerable rows cover 60 MAC questions, 39 RLC questions, and 70 RRC questions; the remaining rows are out-of-scope controls. The MAC and RRC counts include smoke retrieval rows for high-signal clauses. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality. A term can use `a|b` for accepted wording variants, and the checker applies light morphology normalization. These labels currently cover a representative subset, not every retrieval row.
 
 Run locally after ingestion:
 

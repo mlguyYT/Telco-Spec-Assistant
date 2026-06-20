@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from eval.run import evaluate, evaluate_with_retriever
+from eval.run import _check_required_terms, evaluate, evaluate_with_retriever
 from generation.base import GeneratedAnswer
 from generation.factory import get_generator
 from generation.gemini import GeminiGenerator
@@ -362,6 +362,14 @@ class RetrievalEvalTests(unittest.TestCase):
 
             self.assertEqual(report["generator"], "static")
             self.assertEqual(report["answer_quality_accuracy"], 1.0)
+
+    def test_required_answer_terms_allow_morphology_and_variants(self) -> None:
+        result = _check_required_terms(
+            "The field can be 16 bits long and is configurable. It lets the UE avoid continuous PDCCH monitoring.",
+            [["length|long", "16", "bit"], ["configured"], ["discontinuously|avoid continuous"]],
+        )
+
+        self.assertTrue(result["all_required_groups_hit"])
 
     def test_evidence_answer_refuses_low_score(self) -> None:
         result = type("Result", (), {"score": 0.1, "chunk": _chunk("4.4", "text")})()

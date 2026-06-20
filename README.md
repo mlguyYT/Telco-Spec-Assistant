@@ -172,7 +172,7 @@ Current local baseline after the multi-spec corpus expansion:
 | Abstention accuracy | 1.000 |
 | Answer-quality questions | 8 |
 | Answer quality accuracy | 0.250 |
-| Answer assertion group accuracy | 0.500 |
+| Answer assertion group accuracy | 0.522 |
 | Answer citation accuracy | 0.817 |
 | Answer refusal accuracy | 1.000 |
 | Latency p50 / p95 | ~19 ms / ~25 ms |

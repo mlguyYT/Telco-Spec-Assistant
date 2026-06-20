@@ -246,11 +246,12 @@ def _check_required_terms(answer: str | None, required_groups: Any) -> dict[str,
         }
 
     normalized_answer = _normalize_answer(answer or "")
+    answer_stems = set(_stem_tokens(normalized_answer))
     groups = []
     hits = 0
     for group in required_groups:
         terms = [str(term).lower() for term in group]
-        missing = [term for term in terms if term not in normalized_answer]
+        missing = [term for term in terms if not _matches_required_term(normalized_answer, answer_stems, term)]
         hit = not missing
         hits += int(hit)
         groups.append({"terms": terms, "hit": hit, "missing": missing})
@@ -265,6 +266,35 @@ def _check_required_terms(answer: str | None, required_groups: Any) -> dict[str,
 
 def _normalize_answer(answer: str) -> str:
     return " ".join(answer.lower().replace("-", " ").split())
+
+
+def _matches_required_term(normalized_answer: str, answer_stems: set[str], term: str) -> bool:
+    return any(_matches_required_variant(normalized_answer, answer_stems, variant) for variant in term.split("|"))
+
+
+def _matches_required_variant(normalized_answer: str, answer_stems: set[str], variant: str) -> bool:
+    normalized_variant = _normalize_answer(variant)
+    if normalized_variant in normalized_answer:
+        return True
+    variant_stems = _stem_tokens(normalized_variant)
+    return bool(variant_stems) and all(stem in answer_stems for stem in variant_stems)
+
+
+def _stem_tokens(text: str) -> list[str]:
+    return [_stem_token(token) for token in text.split()]
+
+
+def _stem_token(token: str) -> str:
+    stripped = "".join(char for char in token if char.isalnum())
+    if len(stripped) > 6 and stripped.endswith("able"):
+        return stripped[:-4]
+    if len(stripped) > 5 and stripped.endswith("ed"):
+        return stripped[:-2]
+    if len(stripped) > 4 and stripped.endswith("ing"):
+        return stripped[:-3]
+    if len(stripped) > 3 and stripped.endswith("s"):
+        return stripped[:-1]
+    return stripped
 
 
 def _percentile(values: list[float], percentile: int) -> float:
