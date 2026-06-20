@@ -25,8 +25,8 @@ The current primary benchmark is the 176-question multi-spec evaluation set over
 | Retriever | Answerable recall@5 | MAC recall@5 | RLC recall@5 | RRC recall@5 | Non-paraphrase recall@5 | Paraphrase recall@5 | Abstention accuracy | Latency p50 / p95 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | BM25 | 0.817 | 0.900 | 0.872 | 0.714 | 0.861 | 0.273 | 1.000 | 18 ms / 26 ms |
-| Vertex AI Vector Search | 0.935 | 0.983 | 0.923 | 0.900 | 0.945 | 0.818 | 1.000 | 429 ms / 561 ms |
-| Hybrid RRF | 0.947 | 0.967 | 1.000 | 0.900 | 0.964 | 0.727 | 1.000 | 496 ms / 678 ms |
+| Vertex AI Vector Search | 0.935 | 0.983 | 0.923 | 0.900 | 0.945 | 0.818 | 1.000 | 409 ms / 570 ms |
+| Hybrid RRF | 0.970 | 0.983 | 1.000 | 0.943 | 0.970 | 1.000 | 1.000 | 466 ms / 605 ms |
 
 ## Multi-Spec Interpretation
 
@@ -34,17 +34,19 @@ BM25 remains fast and strong on exact clause wording, especially MAC and RLC. It
 
 Vertex AI Vector Search materially improves the semantic cases: paraphrase recall rises from 0.273 to 0.818, and RRC recall rises from 0.714 to 0.900.
 
-Hybrid RRF has the best overall answerable recall. It recovers all RLC answerable questions in this run and keeps the RRC improvement from vector retrieval, while preserving much of BM25's exact-match strength. Vertex alone is stronger than hybrid on the paraphrase subset in this run, so the next tuning target is the hybrid weighting/ranking behavior for paraphrase-heavy queries.
+Hybrid RRF has the best overall answerable recall. The tuned setting recovers all RLC answerable questions, reaches full recall on the paraphrase subset, and improves RRC recall while preserving BM25's exact-match strength.
 
 ## Offline Hybrid Tuning
 
-After the managed endpoint run, the chunk embeddings were reused locally to sweep RRF settings without keeping a Vector Search endpoint deployed. This uses the same document embeddings and query embedding model, then computes brute-force dot-product vector ranks locally. It is useful for selecting candidate defaults, but the tuned setting should still be verified in the next managed endpoint run.
+After the first managed endpoint run, the chunk embeddings were reused locally to sweep RRF settings without keeping a Vector Search endpoint deployed. This uses the same document embeddings and query embedding model, then computes brute-force dot-product vector ranks locally. The selected setting was then verified in a short managed endpoint run.
 
 | Source K | RRF C | Vector weight | Answerable recall@5 | MAC recall@5 | RLC recall@5 | RRC recall@5 | Non-paraphrase recall@5 | Paraphrase recall@5 | Abstention accuracy |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 100 | 40 | 2.0 | 0.970 | 0.983 | 1.000 | 0.943 | 0.970 | 1.000 | 1.000 |
 
 These values are now the default hybrid settings: `HYBRID_SOURCE_K=100`, `HYBRID_RRF_C=40`, and `HYBRID_VERTEX_WEIGHT=2.0`.
+
+The managed endpoint verification matched the offline tuning result at recall@5: answerable `0.970`, non-paraphrase `0.970`, paraphrase `1.000`, MAC `0.983`, RLC `1.000`, RRC `0.943`, and abstention `1.000`.
 
 ## RLC-Only Historical Setup
 
@@ -92,5 +94,3 @@ Hybrid retrieval uses Reciprocal Rank Fusion rather than raw score fusion, becau
 ## Operational Notes
 
 The Vector Search endpoints used for these measurements were deleted after the runs. Generated vectors and full eval reports are local artifacts under `.data/` and are not committed.
-
-The next retrieval-quality step is to verify the tuned hybrid settings in a short managed endpoint run before adding generated answers.
