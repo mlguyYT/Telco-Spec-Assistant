@@ -6,10 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from retrieval.base import RetrievedChunk
+from retrieval.embedding import DEFAULT_EMBEDDING_MODEL, DEFAULT_REGION, GenAIEmbedder
 
 DEFAULT_CHUNKS_PATH = ".data/chunks/rlc_v1.jsonl"
-DEFAULT_EMBEDDING_MODEL = "text-embedding-005"
-DEFAULT_REGION = "us-central1"
 
 
 class VertexRetriever:
@@ -20,7 +19,7 @@ class VertexRetriever:
     """
 
     def __init__(self, chunks_path: Path | None = None, top_k: int | None = None) -> None:
-        aiplatform, vertexai, text_embedding_model = _load_vertex_dependencies()
+        aiplatform = _load_vertex_dependencies()
         self.project_id = _required_env("GCP_PROJECT_ID")
         self.region = os.environ.get("REGION", DEFAULT_REGION)
         self.embedding_model_name = os.environ.get("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
@@ -31,14 +30,17 @@ class VertexRetriever:
         path = chunks_path or Path(os.environ.get("CHUNKS_PATH", DEFAULT_CHUNKS_PATH))
         self.by_id = _load_chunk_map(path)
 
-        vertexai.init(project=self.project_id, location=self.region)
         aiplatform.init(project=self.project_id, location=self.region)
-        self.embedding_model = text_embedding_model.from_pretrained(self.embedding_model_name)
+        self.embedder = GenAIEmbedder(
+            project_id=self.project_id,
+            region=self.region,
+            model_name=self.embedding_model_name,
+        )
         self.endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=self.endpoint_id)
 
     def retrieve(self, query: str, k: int = 5) -> list[RetrievedChunk]:
         top_k = k or self.default_top_k
-        query_vector = self._embed([query])[0]
+        query_vector = self.embedder.embed_query(query)
         response = self.endpoint.find_neighbors(
             deployed_index_id=self.deployed_index_id,
             queries=[query_vector],
@@ -64,21 +66,16 @@ class VertexRetriever:
             )
         return results
 
-    def _embed(self, texts: list[str]) -> list[list[float]]:
-        return [list(embedding.values) for embedding in self.embedding_model.get_embeddings(texts)]
 
-
-def _load_vertex_dependencies() -> tuple[Any, Any, Any]:
+def _load_vertex_dependencies() -> Any:
     try:
-        import vertexai
         from google.cloud import aiplatform
-        from vertexai.language_models import TextEmbeddingModel
     except ImportError as exc:
         raise RuntimeError(
             "RETRIEVER=vertex requires optional cloud dependencies. "
             "Install them with: pip install -r requirements-cloud.txt"
         ) from exc
-    return aiplatform, vertexai, TextEmbeddingModel
+    return aiplatform
 
 
 def _required_env(name: str) -> str:

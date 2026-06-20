@@ -3,13 +3,16 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from retrieval.embedding import DEFAULT_EMBEDDING_MODEL, DEFAULT_REGION, GenAIEmbedder
+
 DEFAULT_BATCH_SIZE = 50
 DEFAULT_CHUNKS_PATH = ".data/chunks/rlc_v1.jsonl"
-DEFAULT_EMBEDDING_MODEL = "text-embedding-005"
-DEFAULT_REGION = "us-central1"
 DEFAULT_VECTOR_DIR = ".data/vector"
 
 
@@ -58,19 +61,11 @@ def main() -> None:
 
 
 def embed_texts(texts: list[str], batch_size: int = DEFAULT_BATCH_SIZE) -> list[list[float]]:
-    vertexai, text_embedding_model = _load_embedding_dependencies()
     project_id = _required_env("GCP_PROJECT_ID")
     region = os.environ.get("REGION", DEFAULT_REGION)
     model_name = os.environ.get("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
-
-    vertexai.init(project=project_id, location=region)
-    model = text_embedding_model.from_pretrained(model_name)
-
-    vectors: list[list[float]] = []
-    for index in range(0, len(texts), batch_size):
-        batch = texts[index : index + batch_size]
-        vectors.extend(list(embedding.values) for embedding in model.get_embeddings(batch))
-    return vectors
+    embedder = GenAIEmbedder(project_id=project_id, region=region, model_name=model_name)
+    return embedder.embed_documents(texts, batch_size=batch_size)
 
 
 def _load_chunks(path: Path) -> list[dict[str, Any]]:
@@ -78,18 +73,6 @@ def _load_chunks(path: Path) -> list[dict[str, Any]]:
     if not chunks:
         raise ValueError(f"chunk file has no chunks: {path}")
     return chunks
-
-
-def _load_embedding_dependencies() -> tuple[Any, Any]:
-    try:
-        import vertexai
-        from vertexai.language_models import TextEmbeddingModel
-    except ImportError as exc:
-        raise RuntimeError(
-            "Embedding requires optional cloud dependencies. Install them with: "
-            "pip install -r requirements-cloud.txt"
-        ) from exc
-    return vertexai, TextEmbeddingModel
 
 
 def _required_env(name: str) -> str:

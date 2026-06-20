@@ -10,6 +10,7 @@ import urllib.request
 from pathlib import Path
 
 from eval.run import evaluate
+from retrieval.embedding import _effective_batch_size
 from retrieval.factory import get_retriever
 from retrieval.local import LocalRetriever, is_out_of_scope_query, tokenize
 from retrieval.vertex import _load_chunk_map, _neighbor_id, _required_env
@@ -90,6 +91,12 @@ class RetrievalEvalTests(unittest.TestCase):
         with mock.patch.dict("os.environ", {}, clear=True):
             with self.assertRaises(RuntimeError):
                 _required_env("GCP_PROJECT_ID")
+
+    def test_embedding_batch_size_respects_model_limits(self) -> None:
+        self.assertEqual(_effective_batch_size("text-embedding-005", 50), 5)
+        self.assertEqual(_effective_batch_size("gemini-embedding-001", 50), 1)
+        with self.assertRaises(ValueError):
+            _effective_batch_size("text-embedding-005", 0)
 
     def test_evaluate_reports_recall_at_k(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
