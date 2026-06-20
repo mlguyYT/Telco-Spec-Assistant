@@ -38,6 +38,7 @@ def _summary(kind: str, report: dict[str, object]) -> dict[str, object]:
         "answerable_recall_at_k": report["answerable_recall_at_k"],
         "non_paraphrase_recall_at_k": report["non_paraphrase_recall_at_k"],
         "subset_recall_at_k": report["subset_recall_at_k"],
+        "per_spec_recall_at_k": report["per_spec_recall_at_k"],
         "abstention_accuracy": report["abstention_accuracy"],
         "latency_ms_p50": report["latency_ms_p50"],
         "latency_ms_p95": report["latency_ms_p95"],

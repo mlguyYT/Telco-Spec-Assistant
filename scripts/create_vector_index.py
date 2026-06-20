@@ -6,11 +6,12 @@ import os
 from pathlib import Path
 from typing import Any
 
-DEFAULT_DEPLOYED_INDEX_ID = "rlc_deployed"
-DEFAULT_INDEX_DISPLAY_NAME = "rlc-spec-index"
-DEFAULT_ENDPOINT_DISPLAY_NAME = "rlc-spec-endpoint"
+DEFAULT_DEPLOYED_INDEX_ID = "telco_deployed"
+DEFAULT_INDEX_DISPLAY_NAME = "telco-spec-index"
+DEFAULT_ENDPOINT_DISPLAY_NAME = "telco-spec-endpoint"
 DEFAULT_REGION = "us-central1"
 DEFAULT_VECTOR_DIR = ".data/vector"
+DEFAULT_UPSERT_BATCH_SIZE = 1000
 
 
 def main() -> None:
@@ -27,6 +28,7 @@ def main() -> None:
         default=os.environ.get("VECTOR_ENDPOINT_DISPLAY_NAME", DEFAULT_ENDPOINT_DISPLAY_NAME),
     )
     parser.add_argument("--deployed-index-id", default=os.environ.get("VS_DEPLOYED_INDEX_ID", DEFAULT_DEPLOYED_INDEX_ID))
+    parser.add_argument("--upsert-batch-size", type=int, default=DEFAULT_UPSERT_BATCH_SIZE)
     parser.add_argument("--min-replica-count", type=int, default=int(os.environ.get("VS_MIN_REPLICA_COUNT", "1")))
     parser.add_argument("--max-replica-count", type=int, default=int(os.environ.get("VS_MAX_REPLICA_COUNT", "1")))
     args = parser.parse_args()
@@ -61,8 +63,11 @@ def main() -> None:
         )
         for row in vectors
     ]
-    index.upsert_datapoints(datapoints=datapoints)
-    print(f"upserted_datapoints: {len(datapoints)}")
+    total_upserted = 0
+    for batch in _batched(datapoints, args.upsert_batch_size):
+        index.upsert_datapoints(datapoints=batch)
+        total_upserted += len(batch)
+        print(f"upserted_datapoints: {total_upserted}/{len(datapoints)}")
 
     endpoint = aiplatform.MatchingEngineIndexEndpoint.create(
         display_name=args.endpoint_display_name,
@@ -111,7 +116,7 @@ def _create_streaming_brute_force_index(
     )
     index = aiplatform_v1.Index(
         display_name=display_name,
-        description="RLC clause chunk brute-force vector index",
+        description="Telecom specification clause chunk brute-force vector index",
         metadata=metadata,
         index_update_method=aiplatform_v1.Index.IndexUpdateMethod.STREAM_UPDATE,
     )
@@ -132,6 +137,12 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     if not manifest.get("embedding_dimension"):
         raise ValueError(f"manifest is missing embedding_dimension: {path}")
     return manifest
+
+
+def _batched(values: list[Any], batch_size: int) -> list[list[Any]]:
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    return [values[index : index + batch_size] for index in range(0, len(values), batch_size)]
 
 
 def _load_cloud_dependencies() -> tuple[Any, Any, Any, Any]:

@@ -152,6 +152,13 @@ class RetrievalEvalTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _effective_batch_size("text-embedding-005", 0)
 
+    def test_vector_index_upsert_batching_respects_api_limit(self) -> None:
+        from scripts.create_vector_index import _batched
+
+        batches = _batched(list(range(2501)), 1000)
+
+        self.assertEqual([len(batch) for batch in batches], [1000, 1000, 501])
+
     def test_evaluate_reports_recall_at_k(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

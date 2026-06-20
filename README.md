@@ -178,7 +178,7 @@ The larger benchmark intentionally includes exact clause lookups, smoke retrieva
 
 The multi-spec dataset lives at [eval/datasets/telco_retrieval_v1.jsonl](eval/datasets/telco_retrieval_v1.jsonl). The original RLC-only dataset remains at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_retrieval_v1.jsonl).
 
-See [docs/retrieval-results.md](docs/retrieval-results.md) for the earlier RLC-only BM25, Vertex AI Vector Search, and hybrid retrieval comparison.
+See [docs/retrieval-results.md](docs/retrieval-results.md) for BM25, Vertex AI Vector Search, and hybrid retrieval comparisons.
 
 ## Deployment Target
 
