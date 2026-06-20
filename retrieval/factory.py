@@ -28,6 +28,6 @@ def get_retriever(chunks_path: Path | None = None, kind: str | None = None) -> R
                 LocalRetriever.from_jsonl(chunks_path),
                 VertexRetriever(chunks_path=chunks_path),
             ],
-            retriever_weights=[1.0, float(os.environ.get("HYBRID_VERTEX_WEIGHT", "1.02"))],
+            retriever_weights=[1.0, float(os.environ.get("HYBRID_VERTEX_WEIGHT", "2.0"))],
         )
     raise ValueError(f"unsupported retriever: {retriever_kind}")

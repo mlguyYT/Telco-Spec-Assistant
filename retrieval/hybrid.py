@@ -5,7 +5,9 @@ import os
 from retrieval.base import RetrievedChunk, Retriever
 from retrieval.local import is_out_of_scope_query
 
-DEFAULT_RRF_C = 60
+DEFAULT_RRF_C = 40
+DEFAULT_SOURCE_K = 100
+DEFAULT_VECTOR_WEIGHT = 2.0
 
 
 class HybridRetriever:
@@ -23,7 +25,7 @@ class HybridRetriever:
             raise ValueError("retriever_weights must match retrievers")
         self.retrievers = retrievers
         self.retriever_weights = retriever_weights or [1.0] * len(retrievers)
-        self.source_k = source_k or int(os.environ.get("HYBRID_SOURCE_K", "20"))
+        self.source_k = source_k or int(os.environ.get("HYBRID_SOURCE_K", str(DEFAULT_SOURCE_K)))
         self.rrf_c = rrf_c or int(os.environ.get("HYBRID_RRF_C", str(DEFAULT_RRF_C)))
 
     def retrieve(self, query: str, k: int = 5) -> list[RetrievedChunk]:

@@ -93,6 +93,12 @@ class RetrievalEvalTests(unittest.TestCase):
 
         self.assertEqual([item.metadata["chunk_id"] for item in results], ["b", "a"])
 
+    def test_hybrid_retriever_uses_tuned_defaults(self) -> None:
+        retriever = HybridRetriever([_StaticRetriever([]), _StaticRetriever([])])
+
+        self.assertEqual(retriever.source_k, 100)
+        self.assertEqual(retriever.rrf_c, 40)
+
     def test_hybrid_retriever_applies_out_of_scope_guard_before_children(self) -> None:
         child = _FailingRetriever()
         retriever = HybridRetriever([child])

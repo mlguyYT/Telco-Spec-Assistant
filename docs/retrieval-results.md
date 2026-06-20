@@ -36,6 +36,16 @@ Vertex AI Vector Search materially improves the semantic cases: paraphrase recal
 
 Hybrid RRF has the best overall answerable recall. It recovers all RLC answerable questions in this run and keeps the RRC improvement from vector retrieval, while preserving much of BM25's exact-match strength. Vertex alone is stronger than hybrid on the paraphrase subset in this run, so the next tuning target is the hybrid weighting/ranking behavior for paraphrase-heavy queries.
 
+## Offline Hybrid Tuning
+
+After the managed endpoint run, the chunk embeddings were reused locally to sweep RRF settings without keeping a Vector Search endpoint deployed. This uses the same document embeddings and query embedding model, then computes brute-force dot-product vector ranks locally. It is useful for selecting candidate defaults, but the tuned setting should still be verified in the next managed endpoint run.
+
+| Source K | RRF C | Vector weight | Answerable recall@5 | MAC recall@5 | RLC recall@5 | RRC recall@5 | Non-paraphrase recall@5 | Paraphrase recall@5 | Abstention accuracy |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 40 | 2.0 | 0.970 | 0.983 | 1.000 | 0.943 | 0.970 | 1.000 | 1.000 |
+
+These values are now the default hybrid settings: `HYBRID_SOURCE_K=100`, `HYBRID_RRF_C=40`, and `HYBRID_VERTEX_WEIGHT=2.0`.
+
 ## RLC-Only Historical Setup
 
 The evaluation set is intentionally small and focused on one specification, so the numbers show direction rather than statistical precision. The main signal is the retrieval tradeoff: lexical retrieval is strong on exact wording, vector retrieval is strong on paraphrases, and rank-fused hybrid retrieval combines both.
@@ -83,4 +93,4 @@ Hybrid retrieval uses Reciprocal Rank Fusion rather than raw score fusion, becau
 
 The Vector Search endpoints used for these measurements were deleted after the runs. Generated vectors and full eval reports are local artifacts under `.data/` and are not committed.
 
-The next retrieval-quality step is to tune hybrid retrieval against the multi-spec benchmark, especially for paraphrase-heavy queries, before adding generated answers.
+The next retrieval-quality step is to verify the tuned hybrid settings in a short managed endpoint run before adding generated answers.

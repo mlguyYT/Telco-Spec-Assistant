@@ -42,7 +42,15 @@ Optional Vertex AI Vector Search path:
    RETRIEVER=vertex python scripts/compare_retrievers.py
    ```
 
-   The default comparison runs `bm25`, `vertex`, and `hybrid` against `.data/chunks/telco_v1.jsonl` and `eval/datasets/telco_retrieval_v1.jsonl`. The hybrid retriever uses Reciprocal Rank Fusion over BM25 and Vertex results, merging by chunk ID instead of comparing raw scores. `HYBRID_VERTEX_WEIGHT` applies a small rank-only weight to the vector retriever for paraphrase-heavy queries.
+   The default comparison runs `bm25`, `vertex`, and `hybrid` against `.data/chunks/telco_v1.jsonl` and `eval/datasets/telco_retrieval_v1.jsonl`. The hybrid retriever uses Reciprocal Rank Fusion over BM25 and Vertex results, merging by chunk ID instead of comparing raw scores. `HYBRID_SOURCE_K`, `HYBRID_RRF_C`, and `HYBRID_VERTEX_WEIGHT` control the rank-fusion behavior.
+
+   To tune those settings without keeping a Vector Search endpoint deployed, use the local vector sweep after generating chunk embeddings:
+
+   ```bash
+   python scripts/tune_hybrid.py
+   ```
+
+   The sweep uses cached query embeddings under `.data/vector/` when available. It does not create a Vector Search endpoint.
 
 6. Tear down the deployed endpoint when finished:
 
