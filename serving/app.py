@@ -82,7 +82,7 @@ class AskHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the local evidence-serving API.")
-    parser.add_argument("--chunks", default=os.environ.get("CHUNKS_PATH", ".data/chunks/rlc_v1.jsonl"))
+    parser.add_argument("--chunks", default=os.environ.get("CHUNKS_PATH", ".data/chunks/telco_v1.jsonl"))
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8080")))
     parser.add_argument("--top-k", type=int, default=int(os.environ.get("TOP_K", "5")))

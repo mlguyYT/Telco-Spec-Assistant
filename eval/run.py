@@ -14,10 +14,10 @@ from serving.app import build_evidence_answer
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate local retrieval over chunk JSONL.")
-    parser.add_argument("--dataset", default="eval/datasets/rlc_retrieval_v1.jsonl")
-    parser.add_argument("--chunks", default=".data/chunks/rlc_v1.jsonl")
+    parser.add_argument("--dataset", default="eval/datasets/telco_retrieval_v1.jsonl")
+    parser.add_argument("--chunks", default=".data/chunks/telco_v1.jsonl")
     parser.add_argument("--top-k", type=int, default=5)
-    parser.add_argument("--report", default=".data/eval/rlc_retrieval_report.json")
+    parser.add_argument("--report", default=".data/eval/telco_retrieval_report.json")
     args = parser.parse_args()
 
     report = evaluate(
@@ -77,8 +77,12 @@ def evaluate_with_retriever(dataset_path: Path, retriever: Retriever, top_k: int
         latency_ms = (time.perf_counter() - start) * 1000
         latencies.append(latency_ms)
         retrieved_sections = [item.chunk["section"] for item in retrieved]
+        retrieved_refs = [_retrieved_ref(item.chunk) for item in retrieved]
         if expected_answerable:
-            hit = bool(set(expected_sections).intersection(retrieved_sections))
+            if row.get("expected_spec_id"):
+                hit = bool(set(_expected_refs(row)).intersection(retrieved_refs))
+            else:
+                hit = bool(set(expected_sections).intersection(retrieved_sections))
             answerable_count += 1
             answerable_hits += int(hit)
         else:
@@ -108,6 +112,7 @@ def evaluate_with_retriever(dataset_path: Path, retriever: Retriever, top_k: int
                 "expected_answerable": expected_answerable,
                 "expected_sections": expected_sections,
                 "retrieved_sections": retrieved_sections,
+                "retrieved_refs": retrieved_refs,
                 "hit": hit,
                 "phrasing": row.get("phrasing"),
                 "answer": answer,
@@ -148,6 +153,20 @@ def _expected_sections(row: dict[str, Any]) -> list[str]:
     if "expected_section" in row:
         return [str(row["expected_section"])]
     raise ValueError(f"question {row.get('id', '<unknown>')} is missing expected sections")
+
+
+def _expected_refs(row: dict[str, Any]) -> list[str]:
+    sections = _expected_sections(row)
+    expected_spec_id = row.get("expected_spec_id")
+    if not expected_spec_id:
+        return sections
+    return [f"{expected_spec_id}#{section}" for section in sections]
+
+
+def _retrieved_ref(chunk: dict[str, Any]) -> str:
+    spec_id = str(chunk.get("spec_id", ""))
+    section = str(chunk.get("section", ""))
+    return f"{spec_id}#{section}"
 
 
 def _expected_answerable(row: dict[str, Any]) -> bool:

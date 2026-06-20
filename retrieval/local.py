@@ -36,18 +36,26 @@ STOPWORDS = {
 OUT_OF_SCOPE_TERMS = {
     "ciphering",
     "compression",
-    "harq",
     "integrity",
-    "mac",
+    "nas",
     "pdcp",
-    "rrc",
-    "scheduling",
 }
 IN_SCOPE_TERMS = {
+    "access",
     "am",
     "amd",
+    "harq",
+    "logical",
+    "mac",
+    "measurement",
+    "mobility",
+    "random",
     "rlc",
+    "rrc",
+    "scheduling",
     "sdu",
+    "security",
+    "service",
     "pdu",
     "sn",
     "status",
@@ -185,6 +193,12 @@ def _expand_domain_terms(tokens: list[str]) -> list[str]:
         expanded.extend(["negative", "acknowledgment", "status", "nack"])
     if "retransmission" in token_set:
         expanded.extend(["retransmit", "negative", "acknowledgment"])
+    if {"random", "access"}.issubset(token_set):
+        expanded.extend(["ra", "preamble", "response"])
+    if {"logical", "channel"}.issubset(token_set):
+        expanded.extend(["lch", "prioritization"])
+    if {"transport", "channel"}.issubset(token_set):
+        expanded.extend(["ul", "sch", "dl", "sch"])
     return expanded
 
 

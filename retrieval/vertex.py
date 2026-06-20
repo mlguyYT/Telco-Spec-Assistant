@@ -9,7 +9,7 @@ from retrieval.base import RetrievedChunk
 from retrieval.embedding import DEFAULT_EMBEDDING_MODEL, DEFAULT_REGION, GenAIEmbedder
 from retrieval.local import is_out_of_scope_query
 
-DEFAULT_CHUNKS_PATH = ".data/chunks/rlc_v1.jsonl"
+DEFAULT_CHUNKS_PATH = ".data/chunks/telco_v1.jsonl"
 
 
 class VertexRetriever:

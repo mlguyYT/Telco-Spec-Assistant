@@ -2,6 +2,16 @@
 # Downloaded documents are not committed to the repository.
 
 documents:
+  - id: 3gpp-ts-38-321-mac-rel19
+    spec_id: "3GPP TS 38.321"
+    title: "NR; Medium Access Control (MAC) protocol specification"
+    release: "Rel-19"
+    version: "v19.2.0"
+    local_seed_filename: "38321-j20-mac.docx"
+    source_url: "https://www.3gpp.org/ftp/Specs/archive/38_series/38.321/38321-j20.zip"
+    source_archive_hint: "https://www.3gpp.org/ftp/Specs/archive/38_series/38.321/"
+    redistribution: "Do not commit downloaded specification files."
+    notes: "Seed metadata came from the local DOCX filename and parsed scope. Verify the official 3GPP download URL before publishing automation."
   - id: 3gpp-ts-38-322-rlc-rel19
     spec_id: "3GPP TS 38.322"
     title: "NR; Radio Link Control (RLC) protocol specification"
@@ -12,3 +22,13 @@ documents:
     source_archive_hint: "https://www.3gpp.org/ftp/Specs/archive/38_series/38.322/"
     redistribution: "Do not commit downloaded specification files."
     notes: "Seed metadata came from the local DOCX properties. Verify the official 3GPP download URL before publishing automation."
+  - id: 3gpp-ts-38-331-rrc-rel19
+    spec_id: "3GPP TS 38.331"
+    title: "NR; Radio Resource Control (RRC) protocol specification"
+    release: "Rel-19"
+    version: "v19.2.0"
+    local_seed_filename: "38331-j20-rrc.docx"
+    source_url: "https://www.3gpp.org/ftp/Specs/archive/38_series/38.331/38331-j20.zip"
+    source_archive_hint: "https://www.3gpp.org/ftp/Specs/archive/38_series/38.331/"
+    redistribution: "Do not commit downloaded specification files."
+    notes: "Seed metadata came from the local DOCX filename and parsed scope. Verify the official 3GPP download URL before publishing automation."

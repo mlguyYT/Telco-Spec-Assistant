@@ -4,7 +4,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     HOST=0.0.0.0 \
     PORT=8080 \
-    CHUNKS_PATH=/data/chunks/rlc_v1.jsonl
+    CHUNKS_PATH=/data/chunks/telco_v1.jsonl
 
 WORKDIR /app
 

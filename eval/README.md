@@ -1,6 +1,6 @@
 # Evaluation
 
-V1 evaluation uses pure spec-retrieval questions over 3GPP TS 38.322.
+V1 evaluation uses pure spec-retrieval questions over 3GPP TS 38.321, TS 38.322, and TS 38.331.
 
 Metrics:
 
@@ -15,12 +15,12 @@ Metrics:
 - p50 / p95 latency
 - estimated cost per request
 
-The first 20 questions measure retrieval coverage over RLC clauses. The next 6 harden the suite with precise field-value questions, terminology variants, and out-of-scope controls. The final 5 are answerable paraphrase questions tagged with `"phrasing": "paraphrase"`; they are designed to expose wording robustness gaps in the local BM25 baseline before adding optional managed vector retrieval. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality.
+The RLC questions measure retrieval coverage, precise field values, terminology variants, out-of-scope controls, and answerable paraphrase cases. The multi-spec dataset keeps those RLC rows and adds initial MAC/RRC clause-retrieval rows. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality.
 
 Run locally after ingestion:
 
 ```bash
-python -m eval.run --dataset eval/datasets/rlc_retrieval_v1.jsonl --chunks .data/chunks/rlc_v1.jsonl
+python -m eval.run --dataset eval/datasets/telco_retrieval_v1.jsonl --chunks .data/chunks/telco_v1.jsonl
 ```
 
 Or run the full local Phase 1 pipeline:

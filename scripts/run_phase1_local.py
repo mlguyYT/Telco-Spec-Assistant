@@ -17,9 +17,9 @@ from ingestion.staging import stage_documents  # noqa: E402
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the local Phase 1 RLC pipeline.")
+    parser = argparse.ArgumentParser(description="Run the local Phase 1 telecom-spec pipeline.")
     parser.add_argument("--manifest", default="specs/manifest.example.yaml")
-    parser.add_argument("--dataset", default="eval/datasets/rlc_retrieval_v1.jsonl")
+    parser.add_argument("--dataset", default="eval/datasets/telco_retrieval_v1.jsonl")
     parser.add_argument("--data-dir", default=".data")
     parser.add_argument("--seed-dir", default=None)
     parser.add_argument("--no-download", action="store_true")
@@ -27,8 +27,8 @@ def main() -> None:
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir)
-    chunks_path = data_dir / "chunks" / "rlc_v1.jsonl"
-    report_path = data_dir / "eval" / "rlc_retrieval_report.json"
+    chunks_path = data_dir / "chunks" / "telco_v1.jsonl"
+    report_path = data_dir / "eval" / "telco_retrieval_report.json"
 
     documents = load_manifest(Path(args.manifest))
     staged = stage_documents(

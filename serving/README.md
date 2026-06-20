@@ -10,7 +10,7 @@ The `/ask` endpoint should return conservative extractive answers with citations
 Run the local baseline after chunks have been generated:
 
 ```bash
-python -m serving.app --chunks .data/chunks/rlc_v1.jsonl
+python -m serving.app --chunks .data/chunks/telco_v1.jsonl
 curl -X POST http://127.0.0.1:8080/ask \
   -H 'content-type: application/json' \
   -d '{"q":"What are the three RLC modes?"}'
@@ -22,7 +22,7 @@ Runtime settings can be provided through flags or environment variables:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CHUNKS_PATH` | `.data/chunks/rlc_v1.jsonl` | Local chunk JSONL file |
+| `CHUNKS_PATH` | `.data/chunks/telco_v1.jsonl` | Local chunk JSONL file |
 | `HOST` | `127.0.0.1` | Bind address |
 | `PORT` | `8080` | HTTP port |
 | `TOP_K` | `5` | Retrieval depth |

@@ -10,9 +10,9 @@ Ask natural-language questions about telecom standards and get grounded, cited a
 
 ## Why this exists
 
-Telecom standards are precise, versioned, and full of details that general LLMs often get wrong. This project starts with 3GPP TS 38.322, the NR Radio Link Control protocol specification, and builds a small but credible retrieval system that answers from source material with traceable citations.
+Telecom standards are precise, versioned, and full of details that general LLMs often get wrong. This project starts with 3GPP TS 38.321, TS 38.322, and TS 38.331, covering NR MAC, RLC, and RRC protocol specifications, and builds a small but credible retrieval system that answers from source material with traceable citations.
 
-The first release is intentionally small: one seed corpus, clause-aware chunking, local retrieval, cited answers, and a retrieval-focused evaluation set. The broader architecture documents how the same system can grow into a deployed GenAI application with managed vector retrieval, structured lookup, agent tools, MCP, observability, and domain-specific integrations.
+The first release is intentionally small: a focused seed corpus, clause-aware chunking, local retrieval, cited answers, and a retrieval-focused evaluation set. The broader architecture documents how the same system can grow into a deployed GenAI application with managed vector retrieval, structured lookup, agent tools, MCP, observability, and domain-specific integrations.
 
 ## V1 Scope
 
@@ -22,7 +22,7 @@ V1 builds the spec-RAG path only:
 - Parse and chunk documents with citation metadata.
 - Run a local BM25 baseline and optionally compare it with Vertex AI Vector Search.
 - Serve an API that returns conservative extractive answers with citations.
-- Evaluate retrieval, paraphrase robustness, abstention, and answer assertion quality on 31 RLC-focused questions.
+- Evaluate retrieval, paraphrase robustness, abstention, and answer assertion quality on a MAC/RLC/RRC-focused question set.
 
 Structured lookup, agent routing, MCP, and deep production observability are documented as later phases, not part of the first executable cut.
 
@@ -94,7 +94,7 @@ telco-spec-assistant/
 
 ## Local Phase 1 Quickstart
 
-Phase 1 runs locally before any cloud resources are required. It stages the RLC seed document into an ignored data directory, extracts clauses, writes citation chunks, and evaluates retrieval.
+Phase 1 runs locally before any cloud resources are required. It stages the MAC, RLC, and RRC seed documents into an ignored data directory, extracts clauses, writes citation chunks, and evaluates retrieval.
 
 Setup:
 
@@ -123,7 +123,7 @@ Generated files are written under `.data/`, which is ignored by git.
 Run the local API after the Phase 1 pipeline:
 
 ```bash
-python -m serving.app --chunks .data/chunks/rlc_v1.jsonl
+python -m serving.app --chunks .data/chunks/telco_v1.jsonl
 curl -X POST http://127.0.0.1:8080/ask \
   -H 'content-type: application/json' \
   -d '{"q":"What are the three RLC modes?"}'
@@ -140,41 +140,41 @@ docker run --rm -p 8080:8080 \
 
 ## Current Local Evaluation
 
-V1 evaluation focuses on retrieval and abstention over the RLC specification:
+V1 evaluation focuses on retrieval and abstention over the MAC, RLC, and RRC specifications:
 
 | Metric | Target |
 |---|---|
-| Answerable recall@5 | Answer-supporting RLC clause appears in top 5 |
+| Answerable recall@5 | Answer-supporting clause appears in top 5 |
 | Paraphrase recall@5 | Same metric on deliberately hard wording variants |
-| Abstention accuracy | Out-of-scope questions return no RLC evidence |
+| Abstention accuracy | Out-of-scope questions return no evidence |
 | Citation support | Approximated by expected-section hits in the local baseline |
 | Answer quality | Required assertion terms appear in grounded extractive answers |
 | Assertion group accuracy | Required answer-term groups matched across labeled questions |
 | Latency p50 / p95 | Measured end to end |
 | Cost per request | Estimated from model and retrieval calls |
 
-Current local baseline:
+Current local baseline after the multi-spec corpus expansion:
 
 | Metric | Value |
 |---|---:|
-| Questions | 31 |
-| Answerable questions | 29 |
+| Questions | 41 |
+| Answerable questions | 39 |
 | Out-of-scope questions | 2 |
-| Overall recall@5 | 0.839 |
-| Answerable recall@5 | 0.828 |
+| Overall recall@5 | 0.902 |
+| Answerable recall@5 | 0.897 |
 | Non-paraphrase recall@5 | 1.000 |
-| Paraphrase recall@5 | 0.000 |
+| Paraphrase recall@5 | 0.200 |
 | Abstention accuracy | 1.000 |
 | Answer-quality questions | 4 |
-| Answer quality accuracy | 1.000 |
-| Answer assertion group accuracy | 1.000 |
-| Latency p50 / p95 | ~0.40 ms / ~0.60 ms |
+| Answer quality accuracy | 0.500 |
+| Answer assertion group accuracy | 0.818 |
+| Latency p50 / p95 | ~16 ms / ~24 ms |
 
 The paraphrase subset is intentionally difficult for the local BM25 baseline. It is a local go/no-go gate for the optional managed vector retrieval path: if these questions are not hard for BM25, the future comparison will be inconclusive.
 
-The dataset lives at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_retrieval_v1.jsonl).
+The multi-spec dataset lives at [eval/datasets/telco_retrieval_v1.jsonl](eval/datasets/telco_retrieval_v1.jsonl). The original RLC-only dataset remains at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_retrieval_v1.jsonl).
 
-See [docs/retrieval-results.md](docs/retrieval-results.md) for the BM25, Vertex AI Vector Search, and hybrid retrieval comparison.
+See [docs/retrieval-results.md](docs/retrieval-results.md) for the earlier RLC-only BM25, Vertex AI Vector Search, and hybrid retrieval comparison.
 
 ## Deployment Target
 

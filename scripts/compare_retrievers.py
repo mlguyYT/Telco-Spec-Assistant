@@ -14,8 +14,8 @@ from retrieval.factory import get_retriever
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compare retrieval recall across configured retrievers.")
-    parser.add_argument("--dataset", default="eval/datasets/rlc_retrieval_v1.jsonl")
-    parser.add_argument("--chunks", default=".data/chunks/rlc_v1.jsonl")
+    parser.add_argument("--dataset", default="eval/datasets/telco_retrieval_v1.jsonl")
+    parser.add_argument("--chunks", default=".data/chunks/telco_v1.jsonl")
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--retrievers", default="bm25,vertex,hybrid")
     args = parser.parse_args()

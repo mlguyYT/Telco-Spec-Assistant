@@ -17,9 +17,8 @@ class IngestionTests(unittest.TestCase):
     def test_manifest_loads_seed_document(self) -> None:
         docs = load_manifest(Path("specs/manifest.example.yaml"))
 
-        self.assertEqual(len(docs), 1)
-        self.assertEqual(docs[0].spec_id, "3GPP TS 38.322")
-        self.assertEqual(docs[0].version, "v19.2.0")
+        self.assertEqual([doc.spec_id for doc in docs], ["3GPP TS 38.321", "3GPP TS 38.322", "3GPP TS 38.331"])
+        self.assertTrue(all(doc.version == "v19.2.0" for doc in docs))
 
     def test_stage_documents_uses_local_seed_without_tracking_path(self) -> None:
         docs = load_manifest(Path("specs/manifest.example.yaml"))
@@ -27,13 +26,14 @@ class IngestionTests(unittest.TestCase):
             root = Path(tmp)
             seed_dir = root / "seed"
             seed_dir.mkdir()
-            (seed_dir / docs[0].local_seed_filename).write_bytes(b"placeholder")
+            for doc in docs:
+                (seed_dir / doc.local_seed_filename).write_bytes(b"placeholder")
 
             staged = stage_documents(docs, data_dir=root / ".data", seed_dir=seed_dir, allow_download=False)
 
-            self.assertEqual(len(staged), 1)
-            self.assertTrue(staged[0].path.exists())
-            self.assertIn(".data", staged[0].path.parts)
+            self.assertEqual(len(staged), 3)
+            self.assertTrue(all(item.path.exists() for item in staged))
+            self.assertTrue(all(".data" in item.path.parts for item in staged))
 
     def test_docx_parser_extracts_heading_sections(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

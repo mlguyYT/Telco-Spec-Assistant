@@ -183,6 +183,34 @@ class RetrievalEvalTests(unittest.TestCase):
             self.assertEqual(report["recall_at_k"], 1.0)
             self.assertEqual(report["answerable_recall_at_k"], 1.0)
 
+    def test_evaluate_disambiguates_same_section_across_specs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            chunks_path = root / "chunks.jsonl"
+            dataset_path = root / "dataset.jsonl"
+            mac_chunk = _chunk("4.3.1", "MAC services provided to upper layers")
+            mac_chunk["spec_id"] = "3GPP TS 38.321"
+            rlc_chunk = _chunk("4.3.1", "RLC services provided to upper layers")
+            rlc_chunk["spec_id"] = "3GPP TS 38.322"
+            chunks_path.write_text(json.dumps(mac_chunk) + "\n" + json.dumps(rlc_chunk) + "\n", encoding="utf-8")
+            dataset_path.write_text(
+                json.dumps(
+                    {
+                        "id": "q1",
+                        "question": "What services are provided by MAC to upper layers?",
+                        "expected_spec_id": "3GPP TS 38.321",
+                        "expected_sections": ["4.3.1"],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            report = evaluate(dataset_path, chunks_path, top_k=1)
+
+            self.assertEqual(report["recall_at_k"], 1.0)
+            self.assertEqual(report["results"][0]["retrieved_refs"][0], "3GPP TS 38.321#4.3.1")
+
     def test_evaluate_reports_phrasing_subset_recall(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

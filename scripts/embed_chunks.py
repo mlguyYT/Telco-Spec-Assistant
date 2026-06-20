@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from retrieval.embedding import DEFAULT_EMBEDDING_MODEL, DEFAULT_REGION, GenAIEmbedder
 
 DEFAULT_BATCH_SIZE = 50
-DEFAULT_CHUNKS_PATH = ".data/chunks/rlc_v1.jsonl"
+DEFAULT_CHUNKS_PATH = ".data/chunks/telco_v1.jsonl"
 DEFAULT_VECTOR_DIR = ".data/vector"
 
 

@@ -11,7 +11,7 @@ def get_retriever(chunks_path: Path | None = None, kind: str | None = None) -> R
     retriever_kind = (kind or os.environ.get("RETRIEVER", "bm25")).lower()
     if retriever_kind == "bm25":
         if chunks_path is None:
-            chunks_path = Path(os.environ.get("CHUNKS_PATH", ".data/chunks/rlc_v1.jsonl"))
+            chunks_path = Path(os.environ.get("CHUNKS_PATH", ".data/chunks/telco_v1.jsonl"))
         return LocalRetriever.from_jsonl(chunks_path)
     if retriever_kind == "vertex":
         from retrieval.vertex import VertexRetriever
@@ -22,7 +22,7 @@ def get_retriever(chunks_path: Path | None = None, kind: str | None = None) -> R
         from retrieval.vertex import VertexRetriever
 
         if chunks_path is None:
-            chunks_path = Path(os.environ.get("CHUNKS_PATH", ".data/chunks/rlc_v1.jsonl"))
+            chunks_path = Path(os.environ.get("CHUNKS_PATH", ".data/chunks/telco_v1.jsonl"))
         return HybridRetriever(
             [
                 LocalRetriever.from_jsonl(chunks_path),
