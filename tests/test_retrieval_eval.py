@@ -9,7 +9,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from eval.run import evaluate
+from eval.run import evaluate, evaluate_with_retriever
+from generation.base import GeneratedAnswer
+from generation.factory import get_generator
+from generation.gemini import GeminiGenerator
 from retrieval.embedding import _effective_batch_size
 from retrieval.factory import get_retriever
 from retrieval.hybrid import HybridRetriever
@@ -62,6 +65,11 @@ class RetrievalEvalTests(unittest.TestCase):
             retriever = get_retriever(chunks_path=chunks_path)
 
             self.assertIsInstance(retriever, LocalRetriever)
+
+    def test_generator_factory_returns_default_extractive_generator(self) -> None:
+        generator = get_generator()
+
+        self.assertEqual(generator.name, "extractive")
 
     def test_hybrid_retriever_uses_rank_fusion_not_raw_scores(self) -> None:
         first = _StaticRetriever(
@@ -197,6 +205,7 @@ class RetrievalEvalTests(unittest.TestCase):
             self.assertEqual(report["question_count"], 1)
             self.assertEqual(report["recall_at_k"], 1.0)
             self.assertEqual(report["answerable_recall_at_k"], 1.0)
+            self.assertEqual(report["answer_citation_accuracy"], 1.0)
 
     def test_evaluate_disambiguates_same_section_across_specs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -291,6 +300,7 @@ class RetrievalEvalTests(unittest.TestCase):
 
             self.assertEqual(report["unanswerable_question_count"], 1)
             self.assertEqual(report["abstention_accuracy"], 1.0)
+            self.assertEqual(report["answer_refusal_accuracy"], 1.0)
 
     def test_evaluate_reports_answer_assertion_quality(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -329,6 +339,29 @@ class RetrievalEvalTests(unittest.TestCase):
             self.assertEqual(report["answer_quality_question_count"], 1)
             self.assertEqual(report["answer_quality_accuracy"], 1.0)
             self.assertEqual(report["answer_assertion_group_accuracy"], 1.0)
+
+    def test_evaluate_uses_injected_generator_for_answer_quality(self) -> None:
+        dataset_row = {
+            "id": "q1",
+            "question": "What does MAC provide?",
+            "expected_sections": ["4.3.1"],
+            "required_answer_terms": [["data transfer"], ["radio resource allocation"]],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset_path = Path(tmp) / "dataset.jsonl"
+            dataset_path.write_text(json.dumps(dataset_row) + "\n", encoding="utf-8")
+            retriever = _StaticRetriever([_retrieved("a", "4.3.1", "MAC services", 1.0)])
+
+            report = evaluate_with_retriever(
+                dataset_path,
+                retriever,
+                top_k=1,
+                generator=_StaticGenerator("data transfer and radio resource allocation"),
+            )
+
+            self.assertEqual(report["generator"], "static")
+            self.assertEqual(report["answer_quality_accuracy"], 1.0)
 
     def test_evidence_answer_refuses_low_score(self) -> None:
         result = type("Result", (), {"score": 0.1, "chunk": _chunk("4.4", "text")})()
@@ -482,6 +515,68 @@ class RetrievalEvalTests(unittest.TestCase):
             server.server_close()
             thread.join(timeout=5)
 
+    def test_serving_http_can_use_injected_generator(self) -> None:
+        retriever = LocalRetriever([_chunk("4.3.1", "4.3.1 Services\nMAC services")])
+        server = create_server_from_retriever(
+            retriever,
+            generator=_StaticGenerator("generated from mocked backend"),
+            host="127.0.0.1",
+            port=0,
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            answer = _request_json(
+                f"http://127.0.0.1:{server.server_port}/ask",
+                payload={"question": "What does MAC provide?"},
+            )
+
+            self.assertEqual(answer["answer"], "generated from mocked backend")
+            self.assertEqual(answer["generator"], "static")
+            self.assertTrue(answer["supported"])
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
+    def test_gemini_generator_accepts_only_retrieved_citation_ids(self) -> None:
+        generator = object.__new__(GeminiGenerator)
+        generator.client = _FakeGenAIClient(
+            {
+                "supported": True,
+                "answer": "DRX controls PDCCH monitoring activity.",
+                "citation_ids": ["C1", "C99"],
+            }
+        )
+        generator.model_name = "test-model"
+        generator.generate_content_config = lambda **kwargs: kwargs
+
+        result = generator.generate(
+            "Which mechanism controls PDCCH monitoring?",
+            [_retrieved("a", "5.7", "5.7 DRX\nDRX controls PDCCH monitoring activity.", 0.9)],
+        )
+
+        self.assertTrue(result.supported)
+        self.assertEqual(result.answer, "DRX controls PDCCH monitoring activity.")
+        self.assertEqual([citation["chunk_id"] for citation in result.citations], ["a"])
+
+    def test_gemini_generator_refuses_without_valid_citation_ids(self) -> None:
+        generator = object.__new__(GeminiGenerator)
+        generator.client = _FakeGenAIClient(
+            {
+                "supported": True,
+                "answer": "Unsupported answer.",
+                "citation_ids": ["C99"],
+            }
+        )
+        generator.model_name = "test-model"
+        generator.generate_content_config = lambda **kwargs: kwargs
+
+        result = generator.generate("Question?", [_retrieved("a", "4.3.1", "4.3.1 Services\nMAC services", 1.0)])
+
+        self.assertFalse(result.supported)
+        self.assertEqual(result.citations, [])
+
     def test_serving_http_rejects_invalid_json(self) -> None:
         retriever = LocalRetriever([_chunk("4.4", "4.4 Functions\nsegmentation and reassembly")])
         server = create_server_from_retriever(retriever, host="127.0.0.1", port=0)
@@ -553,6 +648,34 @@ class _StaticRetriever:
 
     def retrieve(self, query: str, k: int = 5) -> list[object]:
         return self.results[:k]
+
+
+class _StaticGenerator:
+    name = "static"
+
+    def __init__(self, answer: str) -> None:
+        self.answer = answer
+
+    def generate(self, question: str, results: list[object], *, min_score: float = 0.0) -> GeneratedAnswer:
+        return GeneratedAnswer(
+            answer=self.answer,
+            citations=[],
+            supported=True,
+            generator=self.name,
+        )
+
+
+class _FakeGenAIClient:
+    def __init__(self, payload: dict[str, object]) -> None:
+        self.models = _FakeGenAIModels(payload)
+
+
+class _FakeGenAIModels:
+    def __init__(self, payload: dict[str, object]) -> None:
+        self.payload = payload
+
+    def generate_content(self, **kwargs: object) -> object:
+        return type("Response", (), {"text": json.dumps(self.payload)})()
 
 
 class _FailingRetriever:

@@ -35,7 +35,7 @@ The purpose is to prove that the system can ingest a real telecom standard, pres
 - Ingestion produces chunks with spec, release, version, section, source URL, and hash metadata.
 - `/ask` returns answers with citations for questions covered by the indexed MAC/RLC/RRC corpus.
 - `/ask` refuses or states insufficient evidence when the corpus does not support an answer.
-- Eval runner reports recall@5, per-spec recall@5, paraphrase recall@5, abstention accuracy, citation support, and answer assertion quality for the multi-spec question set.
+- Eval runner reports recall@5, per-spec recall@5, paraphrase recall@5, abstention accuracy, answer citation accuracy, answer refusal accuracy, and answer assertion quality for the multi-spec question set.
 - No downloaded specifications or secrets are tracked by git.
 
 ## Human Decisions Before Implementation

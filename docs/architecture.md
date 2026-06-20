@@ -50,7 +50,7 @@ The serving path retrieves relevant chunks and generates answers that cite the s
 
 ### Evaluation
 
-V1 evaluation checks whether the expected supporting clause is retrieved, whether out-of-scope questions abstain, and whether labeled answer assertions appear in grounded extractive answers.
+V1 evaluation checks whether the expected supporting clause is retrieved, whether out-of-scope questions abstain, whether generated citations point to expected supporting clauses, and whether labeled answer assertions appear in grounded answers.
 
 ## Later Architecture
 

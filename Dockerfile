@@ -12,6 +12,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY eval ./eval
+COPY generation ./generation
 COPY ingestion ./ingestion
 COPY retrieval ./retrieval
 COPY scripts ./scripts

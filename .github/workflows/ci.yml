@@ -35,6 +35,7 @@ jobs:
         run: >-
           python -m py_compile
           ingestion/*.py
+          generation/*.py
           retrieval/*.py
           eval/*.py
           serving/*.py

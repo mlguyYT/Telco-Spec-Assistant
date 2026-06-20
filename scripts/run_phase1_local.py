@@ -71,6 +71,10 @@ def main() -> None:
         print(f"answer quality accuracy: {report['answer_quality_accuracy']:.3f}")
     if report["answer_assertion_group_accuracy"] is not None:
         print(f"answer assertion group accuracy: {report['answer_assertion_group_accuracy']:.3f}")
+    if report["answer_citation_accuracy"] is not None:
+        print(f"answer citation accuracy: {report['answer_citation_accuracy']:.3f}")
+    if report["answer_refusal_accuracy"] is not None:
+        print(f"answer refusal accuracy: {report['answer_refusal_accuracy']:.3f}")
     print(f"latency p50 / p95 ms: {report['latency_ms_p50']:.2f} / {report['latency_ms_p95']:.2f}")
     print(f"chunks: {chunks_path}")
     print(f"report: {report_path}")

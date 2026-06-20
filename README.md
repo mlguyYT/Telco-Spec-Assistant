@@ -21,7 +21,7 @@ V1 builds the spec-RAG path only:
 - Fetch public specifications from a manifest.
 - Parse and chunk documents with citation metadata.
 - Run a local BM25 baseline and optionally compare it with Vertex AI Vector Search.
-- Serve an API that returns conservative extractive answers with citations.
+- Serve an API that returns conservative extractive answers by default, with optional Gemini grounded generation.
 - Evaluate retrieval, paraphrase robustness, abstention, and answer assertion quality on a MAC/RLC/RRC-focused question set.
 
 Structured lookup, agent routing, MCP, and deep production observability are documented as later phases, not part of the first executable cut.
@@ -148,7 +148,8 @@ V1 evaluation focuses on retrieval and abstention over the MAC, RLC, and RRC spe
 | Per-spec recall@5 | Same metric split by source specification |
 | Paraphrase recall@5 | Same metric on deliberately hard wording variants |
 | Abstention accuracy | Out-of-scope questions return no evidence |
-| Citation support | Approximated by expected-section hits in the local baseline |
+| Answer citation accuracy | Generated citations include an expected supporting clause |
+| Answer refusal accuracy | Out-of-scope questions produce an unsupported/refusal answer |
 | Answer quality | Required assertion terms appear in grounded extractive answers |
 | Assertion group accuracy | Required answer-term groups matched across labeled questions |
 | Latency p50 / p95 | Measured end to end |
@@ -169,16 +170,27 @@ Current local baseline after the multi-spec corpus expansion:
 | Non-paraphrase recall@5 | 0.861 |
 | Paraphrase recall@5 | 0.273 |
 | Abstention accuracy | 1.000 |
-| Answer-quality questions | 4 |
-| Answer quality accuracy | 0.500 |
-| Answer assertion group accuracy | 0.818 |
-| Latency p50 / p95 | ~19 ms / ~27 ms |
+| Answer-quality questions | 8 |
+| Answer quality accuracy | 0.250 |
+| Answer assertion group accuracy | 0.500 |
+| Answer citation accuracy | 0.817 |
+| Answer refusal accuracy | 1.000 |
+| Latency p50 / p95 | ~19 ms / ~25 ms |
 
 The larger benchmark intentionally includes exact clause lookups, smoke retrieval rows, same-section-number disambiguation, paraphrases, and out-of-scope controls. The local BM25 baseline is still strong on many exact MAC/RLC questions, but the RRC and paraphrase gaps make the optional managed vector and hybrid retrieval comparison meaningful.
 
 The multi-spec dataset lives at [eval/datasets/telco_retrieval_v1.jsonl](eval/datasets/telco_retrieval_v1.jsonl). The original RLC-only dataset remains at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_retrieval_v1.jsonl).
 
 See [docs/retrieval-results.md](docs/retrieval-results.md) for BM25, Vertex AI Vector Search, and hybrid retrieval comparisons.
+
+## Grounded Generation
+
+The serving layer has a pluggable answer generator:
+
+- `GENERATOR=extractive` keeps the default local path credential-free and quotes evidence from retrieved chunks.
+- `GENERATOR=gemini` uses Vertex AI Gemini generation over the retrieved chunks and requires `GCP_PROJECT_ID`, `REGION`, and `GEMINI_MODEL`.
+
+The Gemini path is constrained to the retrieved excerpts. It must return structured JSON, cite only retrieved chunk IDs, and refuse when the retrieved evidence is insufficient.
 
 ## Deployment Target
 

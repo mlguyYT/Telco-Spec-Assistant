@@ -10,13 +10,14 @@ Metrics:
 - non-paraphrase recall@5 for the original baseline rows
 - answerable recall@5 for questions with expected MAC, RLC, or RRC clauses
 - abstention accuracy for out-of-scope questions
-- citation support, approximated by expected-section hits in the local baseline
+- answer citation accuracy, measured by whether generated citations include an expected supporting clause
+- answer refusal accuracy for out-of-scope questions
 - answer quality over labeled questions, checked by required assertion terms in grounded extractive answers
 - assertion group accuracy for precise value and terminology-variant questions
 - p50 / p95 latency
 - estimated cost per request
 
-The multi-spec dataset has 176 rows. It combines the original RLC retrieval, precise-value, terminology-variant, out-of-scope, and paraphrase rows with broader MAC/RRC clause-retrieval coverage. The answerable rows cover 60 MAC questions, 39 RLC questions, and 70 RRC questions; the remaining rows are out-of-scope controls. The MAC and RRC counts include smoke retrieval rows for high-signal clauses. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality.
+The multi-spec dataset has 176 rows. It combines the original RLC retrieval, precise-value, terminology-variant, out-of-scope, and paraphrase rows with broader MAC/RRC clause-retrieval coverage. The answerable rows cover 60 MAC questions, 39 RLC questions, and 70 RRC questions; the remaining rows are out-of-scope controls. The MAC and RRC counts include smoke retrieval rows for high-signal clauses. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality. These labels currently cover a representative subset, not every retrieval row.
 
 Run locally after ingestion:
 
