@@ -42,6 +42,8 @@ Optional Vertex AI Vector Search path:
    RETRIEVER=vertex python scripts/compare_retrievers.py
    ```
 
+   The default comparison runs `bm25`, `vertex`, and `hybrid`. The hybrid retriever uses Reciprocal Rank Fusion over BM25 and Vertex results, merging by chunk ID instead of comparing raw scores.
+
 6. Tear down the deployed endpoint when finished:
 
    ```bash

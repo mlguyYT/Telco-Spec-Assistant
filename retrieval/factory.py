@@ -17,4 +17,16 @@ def get_retriever(chunks_path: Path | None = None, kind: str | None = None) -> R
         from retrieval.vertex import VertexRetriever
 
         return VertexRetriever(chunks_path=chunks_path)
+    if retriever_kind == "hybrid":
+        from retrieval.hybrid import HybridRetriever
+        from retrieval.vertex import VertexRetriever
+
+        if chunks_path is None:
+            chunks_path = Path(os.environ.get("CHUNKS_PATH", ".data/chunks/rlc_v1.jsonl"))
+        return HybridRetriever(
+            [
+                LocalRetriever.from_jsonl(chunks_path),
+                VertexRetriever(chunks_path=chunks_path),
+            ]
+        )
     raise ValueError(f"unsupported retriever: {retriever_kind}")

@@ -17,7 +17,7 @@ def main() -> None:
     parser.add_argument("--dataset", default="eval/datasets/rlc_retrieval_v1.jsonl")
     parser.add_argument("--chunks", default=".data/chunks/rlc_v1.jsonl")
     parser.add_argument("--top-k", type=int, default=5)
-    parser.add_argument("--retrievers", default="bm25,vertex")
+    parser.add_argument("--retrievers", default="bm25,vertex,hybrid")
     args = parser.parse_args()
 
     for kind in [value.strip() for value in args.retrievers.split(",") if value.strip()]:

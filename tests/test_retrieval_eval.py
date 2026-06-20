@@ -12,6 +12,7 @@ from pathlib import Path
 from eval.run import evaluate
 from retrieval.embedding import _effective_batch_size
 from retrieval.factory import get_retriever
+from retrieval.hybrid import HybridRetriever
 from retrieval.local import LocalRetriever, is_out_of_scope_query, tokenize
 from retrieval.vertex import VertexRetriever, _load_chunk_map, _neighbor_id, _required_env
 from serving.app import _citation, _order_results_for_answer, build_evidence_answer, create_server_from_retriever
@@ -53,6 +54,35 @@ class RetrievalEvalTests(unittest.TestCase):
             retriever = get_retriever(chunks_path=chunks_path)
 
             self.assertIsInstance(retriever, LocalRetriever)
+
+    def test_hybrid_retriever_uses_rank_fusion_not_raw_scores(self) -> None:
+        first = _StaticRetriever(
+            [
+                _retrieved("a", "4.1", "first raw score is tiny", 0.01),
+                _retrieved("b", "4.2", "second raw score is huge", 1000.0),
+            ]
+        )
+        second = _StaticRetriever(
+            [
+                _retrieved("b", "4.2", "second raw score is huge", 0.02),
+                _retrieved("c", "4.3", "third raw score is larger", 500.0),
+            ]
+        )
+        retriever = HybridRetriever([first, second], source_k=2, rrf_c=60)
+
+        results = retriever.retrieve("rank fusion query", k=3)
+
+        self.assertEqual([item.metadata["chunk_id"] for item in results], ["b", "a", "c"])
+        self.assertGreater(results[0].score, results[1].score)
+        self.assertLess(results[0].score, 1.0)
+
+    def test_hybrid_retriever_applies_out_of_scope_guard_before_children(self) -> None:
+        child = _FailingRetriever()
+        retriever = HybridRetriever([child])
+
+        results = retriever.retrieve("Which PDCP entity performs ciphering?", k=5)
+
+        self.assertEqual(results, [])
 
     def test_factory_rejects_unknown_retriever(self) -> None:
         with self.assertRaises(ValueError):
@@ -426,6 +456,42 @@ def _chunk(section: str, text: str) -> dict[str, object]:
         "document_id": "test",
         "chunk_index": 0,
     }
+
+
+def _retrieved(chunk_id: str, section: str, text: str, score: float) -> object:
+    from retrieval.base import RetrievedChunk
+
+    return RetrievedChunk(
+        text=text,
+        score=score,
+        metadata={
+            "chunk_id": chunk_id,
+            "spec_id": "3GPP TS 38.322",
+            "release": "Rel-19",
+            "version": "v19.2.0",
+            "section": section,
+            "section_title": "Test",
+            "page": None,
+            "source_url": "https://example.invalid/spec.zip",
+            "chunk_hash": "sha256:test",
+            "doc_title": "Test",
+            "document_id": "test",
+            "chunk_index": 0,
+        },
+    )
+
+
+class _StaticRetriever:
+    def __init__(self, results: list[object]) -> None:
+        self.results = results
+
+    def retrieve(self, query: str, k: int = 5) -> list[object]:
+        return self.results[:k]
+
+
+class _FailingRetriever:
+    def retrieve(self, query: str, k: int = 5) -> list[object]:
+        raise AssertionError("child retriever should not be called")
 
 
 def _request_json(url: str, payload: dict[str, object] | None = None) -> dict[str, object]:
