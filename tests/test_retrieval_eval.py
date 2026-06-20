@@ -13,7 +13,7 @@ from eval.run import evaluate
 from retrieval.embedding import _effective_batch_size
 from retrieval.factory import get_retriever
 from retrieval.local import LocalRetriever, is_out_of_scope_query, tokenize
-from retrieval.vertex import _load_chunk_map, _neighbor_id, _required_env
+from retrieval.vertex import VertexRetriever, _load_chunk_map, _neighbor_id, _required_env
 from serving.app import _citation, _order_results_for_answer, build_evidence_answer, create_server_from_retriever
 
 
@@ -91,6 +91,13 @@ class RetrievalEvalTests(unittest.TestCase):
         with mock.patch.dict("os.environ", {}, clear=True):
             with self.assertRaises(RuntimeError):
                 _required_env("GCP_PROJECT_ID")
+
+    def test_vertex_retriever_applies_out_of_scope_guard_before_cloud_calls(self) -> None:
+        retriever = object.__new__(VertexRetriever)
+
+        results = retriever.retrieve("Which PDCP entity performs ciphering?", k=5)
+
+        self.assertEqual(results, [])
 
     def test_embedding_batch_size_respects_model_limits(self) -> None:
         self.assertEqual(_effective_batch_size("text-embedding-005", 50), 5)

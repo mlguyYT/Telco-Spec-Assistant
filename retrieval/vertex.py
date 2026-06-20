@@ -7,6 +7,7 @@ from typing import Any
 
 from retrieval.base import RetrievedChunk
 from retrieval.embedding import DEFAULT_EMBEDDING_MODEL, DEFAULT_REGION, GenAIEmbedder
+from retrieval.local import is_out_of_scope_query
 
 DEFAULT_CHUNKS_PATH = ".data/chunks/rlc_v1.jsonl"
 
@@ -39,6 +40,9 @@ class VertexRetriever:
         self.endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=self.endpoint_id)
 
     def retrieve(self, query: str, k: int = 5) -> list[RetrievedChunk]:
+        if is_out_of_scope_query(query):
+            return []
+
         top_k = k or self.default_top_k
         query_vector = self.embedder.embed_query(query)
         response = self.endpoint.find_neighbors(
