@@ -14,7 +14,7 @@ The purpose is to prove that the system can ingest a real telecom standard, pres
 - Citation metadata schema.
 - Google Cloud RAG Engine / Vector Search indexing path.
 - Cloud Run API with `/ask` and `/health`.
-- 131 retrieval, precise-value, terminology-variant, paraphrase, and out-of-scope evaluation questions across MAC, RLC, and RRC.
+- 176 retrieval, smoke, precise-value, terminology-variant, paraphrase, and out-of-scope evaluation questions across MAC, RLC, and RRC.
 - Basic latency and cost measurement in eval output.
 - Documentation of later structured lookup, agent, MCP, and observability phases.
 

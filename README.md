@@ -158,23 +158,23 @@ Current local baseline after the multi-spec corpus expansion:
 
 | Metric | Value |
 |---|---:|
-| Questions | 131 |
-| Answerable questions | 124 |
+| Questions | 176 |
+| Answerable questions | 169 |
 | Out-of-scope questions | 7 |
-| Overall recall@5 | 0.794 |
-| Answerable recall@5 | 0.782 |
-| MAC recall@5 | 0.886 |
+| Overall recall@5 | 0.824 |
+| Answerable recall@5 | 0.817 |
+| MAC recall@5 | 0.900 |
 | RLC recall@5 | 0.872 |
-| RRC recall@5 | 0.640 |
-| Non-paraphrase recall@5 | 0.842 |
+| RRC recall@5 | 0.714 |
+| Non-paraphrase recall@5 | 0.861 |
 | Paraphrase recall@5 | 0.273 |
 | Abstention accuracy | 1.000 |
 | Answer-quality questions | 4 |
 | Answer quality accuracy | 0.500 |
 | Answer assertion group accuracy | 0.818 |
-| Latency p50 / p95 | ~18 ms / ~26 ms |
+| Latency p50 / p95 | ~19 ms / ~27 ms |
 
-The larger benchmark intentionally includes exact clause lookups, same-section-number disambiguation, paraphrases, and out-of-scope controls. The local BM25 baseline is still strong on many exact MAC/RLC questions, but the RRC and paraphrase gaps make the optional managed vector and hybrid retrieval comparison meaningful.
+The larger benchmark intentionally includes exact clause lookups, smoke retrieval rows, same-section-number disambiguation, paraphrases, and out-of-scope controls. The local BM25 baseline is still strong on many exact MAC/RLC questions, but the RRC and paraphrase gaps make the optional managed vector and hybrid retrieval comparison meaningful.
 
 The multi-spec dataset lives at [eval/datasets/telco_retrieval_v1.jsonl](eval/datasets/telco_retrieval_v1.jsonl). The original RLC-only dataset remains at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_retrieval_v1.jsonl).
 
