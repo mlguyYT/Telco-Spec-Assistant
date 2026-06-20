@@ -35,7 +35,9 @@ class RetrievalEvalTests(unittest.TestCase):
 
     def test_scope_guard_rejects_external_layer_question(self) -> None:
         self.assertTrue(is_out_of_scope_query("Which PDCP entity performs ciphering?"))
+        self.assertTrue(is_out_of_scope_query("Which NAS core-network procedure selects the SMF for a PDU session?"))
         self.assertFalse(is_out_of_scope_query("Which RLC service is provided to upper layers?"))
+        self.assertFalse(is_out_of_scope_query("Which RRC clause mentions a NAS procedure being aborted?"))
 
     def test_local_retriever_ranks_expected_section(self) -> None:
         retriever = LocalRetriever(
@@ -209,6 +211,8 @@ class RetrievalEvalTests(unittest.TestCase):
             report = evaluate(dataset_path, chunks_path, top_k=1)
 
             self.assertEqual(report["recall_at_k"], 1.0)
+            self.assertEqual(report["per_spec_question_counts"], {"3GPP TS 38.321": 1})
+            self.assertEqual(report["per_spec_recall_at_k"], {"3GPP TS 38.321": 1.0})
             self.assertEqual(report["results"][0]["retrieved_refs"][0], "3GPP TS 38.321#4.3.1")
 
     def test_evaluate_reports_phrasing_subset_recall(self) -> None:

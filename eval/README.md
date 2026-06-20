@@ -5,9 +5,10 @@ V1 evaluation uses pure spec-retrieval questions over 3GPP TS 38.321, TS 38.322,
 Metrics:
 
 - retrieval recall@5
+- per-spec recall@5 for MAC, RLC, and RRC answerable questions
 - paraphrase recall@5 for deliberately hard wording variants
 - non-paraphrase recall@5 for the original baseline rows
-- answerable recall@5 for questions with expected RLC clauses
+- answerable recall@5 for questions with expected MAC, RLC, or RRC clauses
 - abstention accuracy for out-of-scope questions
 - citation support, approximated by expected-section hits in the local baseline
 - answer quality over labeled questions, checked by required assertion terms in grounded extractive answers
@@ -15,7 +16,7 @@ Metrics:
 - p50 / p95 latency
 - estimated cost per request
 
-The RLC questions measure retrieval coverage, precise field values, terminology variants, out-of-scope controls, and answerable paraphrase cases. The multi-spec dataset keeps those RLC rows and adds initial MAC/RRC clause-retrieval rows. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality.
+The multi-spec dataset has 131 rows. It combines the original RLC retrieval, precise-value, terminology-variant, out-of-scope, and paraphrase rows with broader MAC/RRC clause-retrieval coverage. The answerable rows cover 35 MAC questions, 39 RLC questions, and 50 RRC questions; the remaining rows are out-of-scope controls. Rows with `required_answer_terms` are answer-level checks: every group must be present in the cited answer for the question to pass answer quality.
 
 Run locally after ingestion:
 

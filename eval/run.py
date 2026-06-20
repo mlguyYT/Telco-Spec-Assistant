@@ -35,6 +35,8 @@ def main() -> None:
         print(f"non_paraphrase_recall@{args.top_k}: {report['non_paraphrase_recall_at_k']:.3f}")
     for subset, recall in report["subset_recall_at_k"].items():
         print(f"{subset}_recall@{args.top_k}: {recall:.3f}")
+    for spec_id, recall in report["per_spec_recall_at_k"].items():
+        print(f"{spec_id}_recall@{args.top_k}: {recall:.3f}")
     if report["answer_quality_accuracy"] is not None:
         print(f"answer_quality_accuracy: {report['answer_quality_accuracy']:.3f}")
     if report["answer_assertion_group_accuracy"] is not None:
@@ -69,6 +71,8 @@ def evaluate_with_retriever(dataset_path: Path, retriever: Retriever, top_k: int
     non_paraphrase_hits = 0
     subset_counts: dict[str, int] = {}
     subset_hits: dict[str, int] = {}
+    per_spec_counts: dict[str, int] = {}
+    per_spec_hits: dict[str, int] = {}
     for row in rows:
         expected_sections = _expected_sections(row)
         expected_answerable = _expected_answerable(row)
@@ -85,6 +89,11 @@ def evaluate_with_retriever(dataset_path: Path, retriever: Retriever, top_k: int
                 hit = bool(set(expected_sections).intersection(retrieved_sections))
             answerable_count += 1
             answerable_hits += int(hit)
+            expected_spec_id = row.get("expected_spec_id")
+            if expected_spec_id:
+                spec_key = str(expected_spec_id)
+                per_spec_counts[spec_key] = per_spec_counts.get(spec_key, 0) + 1
+                per_spec_hits[spec_key] = per_spec_hits.get(spec_key, 0) + int(hit)
         else:
             hit = not retrieved_sections
             unanswerable_count += 1
@@ -109,6 +118,7 @@ def evaluate_with_retriever(dataset_path: Path, retriever: Retriever, top_k: int
             {
                 "id": row["id"],
                 "question": row["question"],
+                "expected_spec_id": row.get("expected_spec_id"),
                 "expected_answerable": expected_answerable,
                 "expected_sections": expected_sections,
                 "retrieved_sections": retrieved_sections,
@@ -139,6 +149,10 @@ def evaluate_with_retriever(dataset_path: Path, retriever: Retriever, top_k: int
             key: subset_hits[key] / count for key, count in sorted(subset_counts.items())
         },
         "subset_question_counts": dict(sorted(subset_counts.items())),
+        "per_spec_recall_at_k": {
+            key: per_spec_hits[key] / count for key, count in sorted(per_spec_counts.items())
+        },
+        "per_spec_question_counts": dict(sorted(per_spec_counts.items())),
         "latency_ms_p50": statistics.median(latencies),
         "latency_ms_p95": _percentile(latencies, 95),
         "citation_support": "approximated_by_expected_section_hit",

@@ -95,10 +95,10 @@ jobs:
 
           terms = [
               "F" + "DE",
-              "res" + "ume",
               "Forward" + " " + "Deployed",
               "inter" + "view",
               "job" + "-" + "application",
+              "rec" + "ruiter",
               "target" + "-" + "role",
               "hir" + "ing",
               "Google" + " " + "roles",

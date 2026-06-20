@@ -40,6 +40,18 @@ OUT_OF_SCOPE_TERMS = {
     "nas",
     "pdcp",
 }
+HIGH_CONFIDENCE_OUT_OF_SCOPE_TERMS = {
+    "5gmm",
+    "amf",
+    "ngap",
+    "nas",
+    "smf",
+}
+EXPLICIT_CORPUS_TERMS = {
+    "mac",
+    "rlc",
+    "rrc",
+}
 IN_SCOPE_TERMS = {
     "access",
     "am",
@@ -135,6 +147,8 @@ def tokenize(text: str) -> list[str]:
 
 def is_out_of_scope_query(text: str) -> bool:
     tokens = set(tokenize(text))
+    if tokens.intersection(HIGH_CONFIDENCE_OUT_OF_SCOPE_TERMS) and not tokens.intersection(EXPLICIT_CORPUS_TERMS):
+        return True
     return bool(tokens.intersection(OUT_OF_SCOPE_TERMS)) and not bool(tokens.intersection(IN_SCOPE_TERMS))
 
 

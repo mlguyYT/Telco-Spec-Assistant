@@ -145,6 +145,7 @@ V1 evaluation focuses on retrieval and abstention over the MAC, RLC, and RRC spe
 | Metric | Target |
 |---|---|
 | Answerable recall@5 | Answer-supporting clause appears in top 5 |
+| Per-spec recall@5 | Same metric split by source specification |
 | Paraphrase recall@5 | Same metric on deliberately hard wording variants |
 | Abstention accuracy | Out-of-scope questions return no evidence |
 | Citation support | Approximated by expected-section hits in the local baseline |
@@ -157,20 +158,23 @@ Current local baseline after the multi-spec corpus expansion:
 
 | Metric | Value |
 |---|---:|
-| Questions | 41 |
-| Answerable questions | 39 |
-| Out-of-scope questions | 2 |
-| Overall recall@5 | 0.902 |
-| Answerable recall@5 | 0.897 |
-| Non-paraphrase recall@5 | 1.000 |
-| Paraphrase recall@5 | 0.200 |
+| Questions | 131 |
+| Answerable questions | 124 |
+| Out-of-scope questions | 7 |
+| Overall recall@5 | 0.794 |
+| Answerable recall@5 | 0.782 |
+| MAC recall@5 | 0.886 |
+| RLC recall@5 | 0.872 |
+| RRC recall@5 | 0.640 |
+| Non-paraphrase recall@5 | 0.842 |
+| Paraphrase recall@5 | 0.273 |
 | Abstention accuracy | 1.000 |
 | Answer-quality questions | 4 |
 | Answer quality accuracy | 0.500 |
 | Answer assertion group accuracy | 0.818 |
-| Latency p50 / p95 | ~16 ms / ~24 ms |
+| Latency p50 / p95 | ~18 ms / ~26 ms |
 
-The paraphrase subset is intentionally difficult for the local BM25 baseline. It is a local go/no-go gate for the optional managed vector retrieval path: if these questions are not hard for BM25, the future comparison will be inconclusive.
+The larger benchmark intentionally includes exact clause lookups, same-section-number disambiguation, paraphrases, and out-of-scope controls. The local BM25 baseline is still strong on many exact MAC/RLC questions, but the RRC and paraphrase gaps make the optional managed vector and hybrid retrieval comparison meaningful.
 
 The multi-spec dataset lives at [eval/datasets/telco_retrieval_v1.jsonl](eval/datasets/telco_retrieval_v1.jsonl). The original RLC-only dataset remains at [eval/datasets/rlc_retrieval_v1.jsonl](eval/datasets/rlc_retrieval_v1.jsonl).
 
@@ -182,7 +186,7 @@ Cloud deployment is Phase 2. The checked-in Dockerfile is the local Cloud Run-co
 
 ## Roadmap
 
-- [ ] Phase 1: Spec RAG over 3GPP TS 38.322 with cited answers and retrieval eval.
+- [ ] Phase 1: Spec RAG over 3GPP TS 38.321, TS 38.322, and TS 38.331 with cited answers and retrieval eval.
 - [ ] Phase 2: Add optional Vertex AI Vector Search retrieval and compare recall against BM25.
 - [ ] Phase 3: Add BigQuery structured lookup for exact parameter questions.
 - [ ] Phase 4: Add ADK or LangGraph tool routing.
