@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
 import json
+import sys
 import tempfile
 import threading
 import unittest
@@ -25,6 +27,16 @@ from serving.app import (
     build_evidence_answer,
     create_server_from_retriever,
 )
+
+
+_DEMO_READINESS_SPEC = importlib.util.spec_from_file_location(
+    "demo_readiness",
+    Path(__file__).resolve().parents[1] / "scripts" / "demo_readiness.py",
+)
+assert _DEMO_READINESS_SPEC is not None and _DEMO_READINESS_SPEC.loader is not None
+demo_readiness = importlib.util.module_from_spec(_DEMO_READINESS_SPEC)
+sys.modules[_DEMO_READINESS_SPEC.name] = demo_readiness
+_DEMO_READINESS_SPEC.loader.exec_module(demo_readiness)
 
 
 class RetrievalEvalTests(unittest.TestCase):
@@ -413,6 +425,42 @@ class RetrievalEvalTests(unittest.TestCase):
         self.assertEqual(_resolve_min_score("auto", "vertex"), 0.0)
         self.assertEqual(_resolve_min_score("auto", "hybrid"), 0.0)
         self.assertEqual(_resolve_min_score("0.2", "hybrid"), 0.2)
+
+    def test_demo_readiness_checks_chunks_and_runtime_env(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            chunks_path = Path(tmp) / "chunks.jsonl"
+            chunks_path.write_text(json.dumps(_chunk("4.4", "4.4 Functions\nsegmentation")) + "\n", encoding="utf-8")
+            env = {
+                "RETRIEVER": "hybrid",
+                "GENERATOR": "gemini",
+                "TOP_K": "5",
+                "MIN_SCORE": "auto",
+                "HYBRID_SOURCE_K": "100",
+                "HYBRID_RRF_C": "40",
+                "HYBRID_VERTEX_WEIGHT": "2.0",
+                "GCP_PROJECT_ID": "project",
+                "REGION": "us-central1",
+                "GEMINI_MODEL": "gemini-2.5-flash",
+                "EMBEDDING_MODEL": "text-embedding-005",
+                "VS_ENDPOINT_ID": "endpoint",
+                "VS_DEPLOYED_INDEX_ID": "deployed",
+                "VS_INDEX_ID": "index",
+            }
+
+            checks = demo_readiness.readiness_checks(env=env, chunks_path=chunks_path)
+
+        by_name = {check.name: check for check in checks}
+        self.assertEqual(by_name["chunks"].status, "PASS")
+        self.assertEqual(by_name["RETRIEVER"].status, "PASS")
+        self.assertEqual(by_name["GENERATOR"].status, "PASS")
+
+    def test_demo_readiness_flags_missing_vector_env(self) -> None:
+        checks = demo_readiness.readiness_checks(env={}, chunks_path=Path("missing.jsonl"))
+
+        failures = {check.name for check in checks if check.status == "FAIL"}
+        self.assertIn("chunks", failures)
+        self.assertIn("VS_ENDPOINT_ID", failures)
+        self.assertIn("VS_DEPLOYED_INDEX_ID", failures)
 
     def test_evidence_answer_cites_top_clause(self) -> None:
         result = type(

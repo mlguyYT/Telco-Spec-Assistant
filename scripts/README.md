@@ -60,4 +60,10 @@ Optional Vertex AI Vector Search path:
 
 Cost note: embedding requests are usage-based. A deployed Vector Search index endpoint can bill while it is running, so create and delete it in the same work session.
 
+Before an expert review session, verify the local runtime configuration without creating or deleting cloud resources:
+
+```bash
+python scripts/demo_readiness.py --strict
+```
+
 Downloaded specifications must be written to an ignored local data directory and never committed.

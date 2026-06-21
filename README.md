@@ -196,7 +196,7 @@ The Gemini path is constrained to the retrieved excerpts. It must return structu
 
 Cloud deployment is Phase 2. The checked-in Dockerfile is the local Cloud Run-compatible serving shape; it expects chunk data to be supplied at runtime and does not bake downloaded specifications or generated chunks into the image. Optional Vertex AI Vector Search scripts let the same clause chunks be embedded, indexed, compared against BM25, and torn down after testing.
 
-For a limited expert review pilot, see [docs/expert-access.md](docs/expert-access.md). The recommended access model is a private Cloud Run service with authenticated invocation, not a public unauthenticated endpoint.
+For a limited expert review pilot, see [docs/expert-access.md](docs/expert-access.md) and [docs/expert-review-runbook.md](docs/expert-review-runbook.md). The recommended access model is an identity-aware access layer in front of the browser UI, not a public unauthenticated endpoint.
 
 ## Roadmap
 

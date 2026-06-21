@@ -60,7 +60,7 @@ Later phases add:
 - ADK or LangGraph agent routing between spec search and structured lookup.
 - MCP server exposing project tools.
 - Deeper observability with request tracing, tokens/sec, latency, and cost/request.
-- Security hardening for customer or private corpora.
+- Security hardening for restricted or private corpora.
 
 These are intentionally not part of V1 implementation.
 
