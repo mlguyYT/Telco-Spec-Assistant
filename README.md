@@ -170,12 +170,12 @@ Current local baseline after the multi-spec corpus expansion:
 | Non-paraphrase recall@5 | 0.861 |
 | Paraphrase recall@5 | 0.273 |
 | Abstention accuracy | 1.000 |
-| Answer-quality questions | 8 |
-| Answer quality accuracy | 0.250 |
-| Answer assertion group accuracy | 0.522 |
+| Answer-quality questions | 25 |
+| Answer quality accuracy | 0.320 |
+| Answer assertion group accuracy | 0.506 |
 | Answer citation accuracy | 0.817 |
 | Answer refusal accuracy | 1.000 |
-| Latency p50 / p95 | ~19 ms / ~25 ms |
+| Latency p50 / p95 | ~32 ms / ~40 ms |
 
 The larger benchmark intentionally includes exact clause lookups, smoke retrieval rows, same-section-number disambiguation, paraphrases, and out-of-scope controls. The local BM25 baseline is still strong on many exact MAC/RLC questions, but the RRC and paraphrase gaps make the optional managed vector and hybrid retrieval comparison meaningful.
 
@@ -195,6 +195,8 @@ The Gemini path is constrained to the retrieved excerpts. It must return structu
 ## Deployment Target
 
 Cloud deployment is Phase 2. The checked-in Dockerfile is the local Cloud Run-compatible serving shape; it expects chunk data to be supplied at runtime and does not bake downloaded specifications or generated chunks into the image. Optional Vertex AI Vector Search scripts let the same clause chunks be embedded, indexed, compared against BM25, and torn down after testing.
+
+For a limited expert review pilot, see [docs/expert-access.md](docs/expert-access.md). The recommended access model is a private Cloud Run service with authenticated invocation, not a public unauthenticated endpoint.
 
 ## Roadmap
 
