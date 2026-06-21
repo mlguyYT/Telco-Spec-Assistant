@@ -38,6 +38,15 @@ demo_readiness = importlib.util.module_from_spec(_DEMO_READINESS_SPEC)
 sys.modules[_DEMO_READINESS_SPEC.name] = demo_readiness
 _DEMO_READINESS_SPEC.loader.exec_module(demo_readiness)
 
+_PUBLIC_HYGIENE_SPEC = importlib.util.spec_from_file_location(
+    "check_public_hygiene",
+    Path(__file__).resolve().parents[1] / "scripts" / "check_public_hygiene.py",
+)
+assert _PUBLIC_HYGIENE_SPEC is not None and _PUBLIC_HYGIENE_SPEC.loader is not None
+check_public_hygiene = importlib.util.module_from_spec(_PUBLIC_HYGIENE_SPEC)
+sys.modules[_PUBLIC_HYGIENE_SPEC.name] = check_public_hygiene
+_PUBLIC_HYGIENE_SPEC.loader.exec_module(check_public_hygiene)
+
 
 class RetrievalEvalTests(unittest.TestCase):
     def test_tokenize_expands_common_rlc_terms(self) -> None:
@@ -461,6 +470,31 @@ class RetrievalEvalTests(unittest.TestCase):
         self.assertIn("chunks", failures)
         self.assertIn("VS_ENDPOINT_ID", failures)
         self.assertIn("VS_DEPLOYED_INDEX_ID", failures)
+
+    def test_public_hygiene_flags_secrets_and_blocked_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            token = "ghp_" + "abcdefghijklmnopqrstuvwxyz1234567890"
+            (root / "README.md").write_text(f"token = {token}\n", encoding="utf-8")
+            (root / "spec.docx").write_bytes(b"doc")
+
+            findings = check_public_hygiene.check_files(root, [Path("README.md"), Path("spec.docx")])
+
+        kinds = {finding.kind for finding in findings}
+        self.assertIn("github token", kinds)
+        self.assertIn("blocked tracked file type", kinds)
+
+    def test_public_hygiene_allows_placeholders(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".env.example").write_text(
+                "GCP_PROJECT_ID=your-project-id\nVS_ENDPOINT_ID=\nGEMINI_MODEL=\n",
+                encoding="utf-8",
+            )
+
+            findings = check_public_hygiene.check_files(root, [Path(".env.example")])
+
+        self.assertEqual(findings, [])
 
     def test_evidence_answer_cites_top_clause(self) -> None:
         result = type(
