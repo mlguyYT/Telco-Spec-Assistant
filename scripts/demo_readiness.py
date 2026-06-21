@@ -118,7 +118,11 @@ def _dependency_checks() -> list[Check]:
         "google.genai": "Gemini generation",
     }
     for package, purpose in packages.items():
-        if importlib.util.find_spec(package):
+        try:
+            found = importlib.util.find_spec(package)
+        except ModuleNotFoundError:
+            found = None
+        if found:
             checks.append(Check("PASS", package, f"available for {purpose}"))
         else:
             checks.append(Check("FAIL", package, f"missing; install requirements-cloud.txt for {purpose}"))
