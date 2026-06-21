@@ -555,6 +555,24 @@ class RetrievalEvalTests(unittest.TestCase):
             server.server_close()
             thread.join(timeout=5)
 
+    def test_serving_http_serves_thin_ui(self) -> None:
+        retriever = LocalRetriever([_chunk("4.3.1", "4.3.1 Services\nMAC services")])
+        server = create_server_from_retriever(retriever, host="127.0.0.1", port=0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{server.server_port}/", timeout=5) as response:
+                body = response.read().decode("utf-8")
+
+            self.assertEqual(response.status, 200)
+            self.assertIn("text/html", response.headers["content-type"])
+            self.assertIn("Telco Spec Assistant", body)
+            self.assertIn('fetch("/ask"', body)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
     def test_serving_http_can_use_injected_generator(self) -> None:
         retriever = LocalRetriever([_chunk("4.3.1", "4.3.1 Services\nMAC services")])
         server = create_server_from_retriever(

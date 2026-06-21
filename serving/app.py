@@ -6,6 +6,7 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from generation.base import AnswerGenerator
 from generation.extractive import (
@@ -25,8 +26,12 @@ class AskHandler(BaseHTTPRequestHandler):
     min_score: float
 
     def do_GET(self) -> None:
-        if self.path == "/health":
+        path = urlparse(self.path).path
+        if path == "/health":
             self._json_response({"status": "ok"})
+            return
+        if path in {"/", "/ui"}:
+            self._html_response(_load_ui_html())
             return
         self.send_error(404)
 
@@ -74,6 +79,15 @@ class AskHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("content-type", "application/json")
         self.send_header("content-length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _html_response(self, html: str, status: int = 200) -> None:
+        body = html.encode("utf-8")
+        self.send_response(status)
+        self.send_header("content-type", "text/html; charset=utf-8")
+        self.send_header("content-length", str(len(body)))
+        self.send_header("cache-control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -161,6 +175,10 @@ def _default_min_score(retriever_kind: str) -> float:
     if retriever_kind.lower() == "bm25":
         return 1.0
     return 0.0
+
+
+def _load_ui_html() -> str:
+    return (Path(__file__).with_name("static") / "index.html").read_text(encoding="utf-8")
 
 
 if __name__ == "__main__":

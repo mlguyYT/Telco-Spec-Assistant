@@ -4,7 +4,7 @@ This project should be tested by domain experts through a controlled, private en
 
 ## Recommended Pilot Setup
 
-Deploy the serving API to Cloud Run as a private service and grant the reviewer permission to invoke it with their Google account. This keeps the endpoint authenticated, avoids distributing local files, and lets the backend keep using the same `/ask` contract as local development.
+Deploy the serving API to Cloud Run and put the browser UI behind an identity-aware access layer. The checked-in service exposes both the JSON `/ask` endpoint and a thin browser UI at `/`, so reviewers can use the same backend without local files.
 
 The reviewer needs:
 
@@ -18,9 +18,9 @@ The reviewer needs:
 
 | Option | Use when | Tradeoff |
 |---|---|---|
-| Cloud Run IAM | Reviewer can use an authenticated HTTP client | Fastest secure pilot for the API |
-| Cloud Run plus a small web UI | Reviewer should not use curl or Postman | Better usability, more implementation work |
-| Identity-Aware Proxy | A browser-facing internal UI is needed | Strong access control, extra setup |
+| Identity-Aware Proxy or equivalent | Reviewer should use a browser UI | Browser-friendly access control |
+| Cloud Run IAM | Reviewer can use an authenticated HTTP client | Fastest secure pilot for the API, awkward for browser-only use |
+| Cloud Run plus checked-in UI | Reviewer should not use curl or Postman | Same `/ask` backend, minimal extra surface |
 | Temporary tunnel | Short trusted live demo only | Easy to start, not suitable as durable access |
 
 Do not expose `/ask` publicly without authentication during the pilot. The service can trigger model calls and should have budget, quota, and logging controls in place before external use.

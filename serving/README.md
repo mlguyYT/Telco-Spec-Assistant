@@ -3,9 +3,11 @@
 V1 serving target:
 
 - `GET /health`
+- `GET /` or `/ui`
 - `POST /ask`
 
 The `/ask` endpoint returns grounded answers with citations or states that the indexed corpus does not contain enough evidence. The default generator is conservative and extractive. A Gemini-backed generator can be enabled explicitly for cloud runs.
+The root path serves a thin browser UI over the same `/ask` endpoint.
 
 Run the local baseline after chunks have been generated:
 
